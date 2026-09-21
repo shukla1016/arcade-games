@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unbeatable Tic-Tac-Toe</title>
+<style>
+:root{
+  --bg:#070b19; --panel:#10162b; --panel2:#151d38; --text:#f7f9ff;
+  --muted:#aab5d0; --cyan:#39d8ff; --pink:#ff4fc3; --gold:#ffd166;
+  --green:#55f29a; --red:#ff5d73; --line:#2b385e;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; padding:20px;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+  color:var(--text); display:flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(circle at 12% 8%,#163d67 0,transparent 28%),
+    radial-gradient(circle at 88% 15%,#501a55 0,transparent 27%),
+    radial-gradient(circle at 50% 110%,#152c57 0,transparent 35%),var(--bg);
+}
+.game{
+  width:min(780px,100%); padding:22px; border-radius:28px;
+  background:linear-gradient(145deg,rgba(17,24,48,.97),rgba(8,13,29,.97));
+  border:1px solid #2a3760; box-shadow:0 25px 80px rgba(0,0,0,.5);
+  overflow:hidden; position:relative;
+}
+.game:before{
+  content:""; position:absolute; inset:0 0 auto 0; height:4px;
+  background:linear-gradient(90deg,var(--cyan),var(--pink),var(--gold));
+}
+.header{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:18px}
+h1{margin:0;font-size:clamp(27px,5vw,43px);letter-spacing:-1.5px}
+.title-gradient{background:linear-gradient(90deg,#52ddff,#d56cff,#ff72c8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.subtitle{margin:5px 0 0;color:var(--muted);font-size:14px}
+.badge{white-space:nowrap;padding:8px 12px;border-radius:99px;background:#182544;border:1px solid #33456e;color:#8eeaff;font-size:12px;font-weight:800}
+.scoreboard{display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:10px;margin-bottom:16px}
+.score{
+  text-align:center;padding:12px 8px;border-radius:17px;background:var(--panel2);
+  border:1px solid var(--line);position:relative;overflow:hidden
+}
+.score:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--accent)}
+.score.you{--accent:var(--cyan)} .score.draw{--accent:var(--gold)} .score.ai{--accent:var(--pink)}
+.score .label{font-size:11px;letter-spacing:1.5px;color:var(--muted);font-weight:800}
+.score strong{display:block;font-size:30px;margin-top:2px}
+.turn{
+  text-align:center;margin:10px auto 15px;min-height:30px;font-weight:800;
+  color:#eef3ff;font-size:15px
+}
+.turn span{color:var(--cyan)}
+.board{
+  width:min(520px,100%);margin:auto;aspect-ratio:1;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:11px;
+}
+.cell{
+  position:relative;border:1px solid #31416a;border-radius:20px;cursor:pointer;
+  color:#fff;background:
+    radial-gradient(circle at 35% 25%,rgba(255,255,255,.07),transparent 35%),
+    linear-gradient(145deg,#1b2747,#10182f);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 18px rgba(0,0,0,.25);
+  font-size:clamp(55px,13vw,95px);font-weight:900;line-height:1;
+  transition:transform .13s,filter .13s,border-color .13s;
+}
+@media(hover:hover) and (pointer:fine){
+ .cell:hover:not(:disabled){transform:translateY(-3px) scale(1.015);filter:brightness(1.2);border-color:#526da9}
+}
+.cell:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.cell:disabled{cursor:default}
+.cell.x{color:var(--cyan);text-shadow:0 0 18px rgba(57,216,255,.55)}
+.cell.o{color:var(--pink);text-shadow:0 0 18px rgba(255,79,195,.5)}
+.cell.win{
+  animation:winPulse .7s ease-in-out infinite alternate;
+  border-color:var(--gold);
+  background:linear-gradient(145deg,#3a3450,#19233f);
+}
+@keyframes winPulse{to{box-shadow:0 0 28px rgba(255,209,102,.35),inset 0 0 20px rgba(255,209,102,.08)}}
+.controls{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:17px}
+button.action,select{
+  min-height:45px;border:1px solid #35476f;border-radius:13px;padding:10px 15px;
+  background:#17223d;color:#fff;font:700 14px inherit;cursor:pointer
+}
+button.action:hover,select:hover{background:#202e50}
+.primary{background:linear-gradient(135deg,#157fa1,#7a35a5)!important;border-color:#68ddff!important}
+.rules{
+  margin-top:18px;padding:15px 17px;border-radius:16px;background:#0b1225;
+  border:1px solid #202d4d;color:#aeb9d3;font-size:13px;line-height:1.55
+}
+.rules strong{color:#fff}
+.flash{animation:flash .4s ease}@keyframes flash{50%{transform:scale(1.025)}}
+@media(max-width:520px){
+ body{padding:10px}.game{padding:16px;border-radius:22px}.header{align-items:flex-start}
+ .badge{font-size:10px;padding:7px 9px}.board{gap:8px}.cell{border-radius:15px}
+}
+</style>
+</head>
+<body>
+<main class="game" id="game">
+  <header class="header">
+    <div>
+      <h1><span class="title-gradient">Tic-Tac-Toe</span></h1>
+      <div class="subtitle">Can you outsmart the machine?</div>
+    </div>
+    <div class="badge">⚡ MINIMAX AI</div>
+  </header>
+
+  <section class="scoreboard" aria-label="Scoreboard">
+    <div class="score you"><div class="label">YOU · X</div><strong id="youScore">0</strong></div>
+    <div class="score draw"><div class="label">DRAWS</div><strong id="drawScore">0</strong></div>
+    <div class="score ai"><div class="label">AI · O</div><strong id="aiScore">0</strong></div>
+  </section>
+
+  <div class="turn" id="message" aria-live="polite">Your turn — <span>make your move!</span></div>
+  <section class="board" id="board" aria-label="Tic-Tac-Toe board"></section>
+
+  <div class="controls">
+    <select id="difficulty" aria-label="AI difficulty">
+      <option value="unbeatable">🔥 Unbeatable AI</option>
+      <option value="easy">🌈 Easy AI</option>
+    </select>
+    <button class="action primary" type="button" id="newRound">✨ New Round</button>
+    <button class="action" type="button" id="resetScores">↻ Reset Scores</button>
+  </div>
+
+  <div class="rules">
+    <strong>🎯 How to play:</strong> You are <b>X</b>. The AI is <b>O</b>.
+    Click an empty tile to place your mark. Make three in a row horizontally,
+    vertically, or diagonally to win. Fill the board without a winning line and
+    the round is a draw. In <b>Unbeatable AI</b> mode, the computer uses Minimax
+    and plays optimally.
+  </div>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const boardEl=document.getElementById("board");
+  const msg=document.getElementById("message");
+  const youScore=document.getElementById("youScore");
+  const aiScore=document.getElementById("aiScore");
+  const drawScore=document.getElementById("drawScore");
+  const difficulty=document.getElementById("difficulty");
+  const newRoundBtn=document.getElementById("newRound");
+  const resetBtn=document.getElementById("resetScores");
+
+  const HUMAN="X", AI="O";
+  const lines=[
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  let state=Array(9).fill("");
+  let over=false, thinking=false;
+  let scores={you:0,ai:0,draw:0};
+
+  function result(s){
+    for(const line of lines){
+      const [a,b,c]=line;
+      if(s[a] && s[a]===s[b] && s[a]===s[c])
+        return {winner:s[a],line};
+    }
+    return s.every(Boolean)?{winner:"draw",line:[]}:null;
+  }
+
+  function render(winLine=[]){
+    boardEl.innerHTML="";
+    state.forEach((v,i)=>{
+      const b=document.createElement("button");
+      b.type="button";
+      b.className="cell"+(v?" "+v.toLowerCase():"");
+      b.textContent=v;
+      b.disabled=Boolean(v)||over||thinking;
+      b.setAttribute("aria-label",v?`Square ${i+1}, ${v}`:`Square ${i+1}, empty`);
+      b.addEventListener("click",()=>humanMove(i));
+      boardEl.appendChild(b);
+    });
+    winLine.forEach(i=>boardEl.children[i].classList.add("win"));
+    youScore.textContent=scores.you;
+    aiScore.textContent=scores.ai;
+    drawScore.textContent=scores.draw;
+  }
+
+  function setMessage(text,accent=false){
+    msg.innerHTML=accent?`<span>${text}</span>`:text;
+  }
+
+  function finish(r){
+    over=true; thinking=false;
+    if(r.winner===HUMAN){scores.you++;setMessage("🎉 YOU WIN! Amazing move!",true);}
+    else if(r.winner===AI){scores.ai++;setMessage("🤖 AI WINS! Try another round.");}
+    else {scores.draw++;setMessage("🤝 DRAW! Nobody gives up.");}
+    render(r.line);
+    document.getElementById("game").classList.remove("flash");
+    void document.getElementById("game").offsetWidth;
+    document.getElementById("game").classList.add("flash");
+  }
+
+  function humanMove(i){
+    if(over||thinking||state[i])return;
+    state[i]=HUMAN;
+    const r=result(state);
+    if(r){finish(r);return;}
+    thinking=true;
+    setMessage("🤖 AI is thinking…");
+    render();
+    window.setTimeout(()=>{
+      const move=chooseMove();
+      if(move>=0)state[move]=AI;
+      const aiResult=result(state);
+      if(aiResult)finish(aiResult);
+      else{thinking=false;setMessage("Your turn — make your move!",true);render();}
+    },320);
+  }
+
+  function chooseMove(){
+    const empty=state.map((v,i)=>v?null:i).filter(v=>v!==null);
+    if(!empty.length)return -1;
+    if(difficulty.value==="easy"){
+      if(Math.random()<.55){
+        const winning=findImmediate(AI); if(winning!==-1)return winning;
+      }
+      return empty[Math.floor(Math.random()*empty.length)];
+    }
+    let best=-Infinity,bestMove=empty[0];
+    for(const i of empty){
+      state[i]=AI;
+      const score=minimax(state,false,0);
+      state[i]="";
+      if(score>best){best=score;bestMove=i;}
+    }
+    return bestMove;
+  }
+
+  function findImmediate(player){
+    for(const i of state.map((v,j)=>v?null:j).filter(v=>v!==null)){
+      state[i]=player;
+      const r=result(state);
+      state[i]="";
+      if(r&&r.winner===player)return i;
+    }
+    return -1;
+  }
+
+  function minimax(s,maximizing,depth){
+    const r=result(s);
+    if(r){
+      if(r.winner===AI)return 10-depth;
+      if(r.winner===HUMAN)return depth-10;
+      return 0;
+    }
+    const empty=s.map((v,i)=>v?null:i).filter(v=>v!==null);
+    if(maximizing){
+      let best=-Infinity;
+      for(const i of empty){s[i]=AI;best=Math.max(best,minimax(s,false,depth+1));s[i]="";}
+      return best;
+    }
+    let best=Infinity;
+    for(const i of empty){s[i]=HUMAN;best=Math.min(best,minimax(s,true,depth+1));s[i]="";}
+    return best;
+  }
+
+  function newRound(){
+    state=Array(9).fill("");over=false;thinking=false;
+    setMessage("Your turn — make your move!",true);render();
+  }
+
+  newRoundBtn.addEventListener("click",newRound);
+  resetBtn.addEventListener("click",()=>{scores={you:0,ai:0,draw:0};newRound();});
+  difficulty.addEventListener("change",newRound);
+
+  render();
+})();
+</script>
+</body>
+</html>

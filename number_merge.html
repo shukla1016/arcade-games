@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+               maximum-scale=1.0,user-scalable=no">
+
+<title>2048 Neon Number Merge</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet">
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    font-family: "Orbitron", sans-serif;
+    color: #e9fbff;
+
+    background:
+        radial-gradient(circle at 20% 20%, rgba(0,220,255,.10), transparent 30%),
+        radial-gradient(circle at 80% 80%, rgba(150,0,255,.12), transparent 35%),
+        linear-gradient(135deg,#020713,#081321 50%,#090319);
+
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+
+    background-image:
+        linear-gradient(rgba(0,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,255,.025) 1px, transparent 1px);
+
+    background-size: 40px 40px;
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.game {
+    width: min(1250px, 96vw);
+    margin: auto;
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    padding: 25px 0;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 22px;
+}
+
+header h1 {
+    margin: 0;
+
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    letter-spacing: 5px;
+
+    color: #8ffcff;
+
+    text-shadow:
+        0 0 10px #00eaff,
+        0 0 30px rgba(0,220,255,.6);
+}
+
+header p {
+    margin: 8px 0 0;
+
+    font-family: Arial, sans-serif;
+    color: #8198b7;
+    font-size: 14px;
+}
+
+/* =========================================================
+   LAYOUT
+========================================================= */
+
+.layout {
+    display: grid;
+    grid-template-columns: 190px minmax(320px, 520px) 190px;
+    justify-content: center;
+    align-items: start;
+    gap: 20px;
+}
+
+/* =========================================================
+   SIDE PANELS
+========================================================= */
+
+.panel {
+    border: 1px solid rgba(0,220,255,.22);
+    border-radius: 20px;
+
+    padding: 22px 18px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(7,26,43,.95),
+            rgba(4,11,26,.96)
+        );
+
+    box-shadow:
+        0 15px 45px rgba(0,0,0,.35),
+        inset 0 0 25px rgba(0,200,255,.025);
+}
+
+.panel h2 {
+    margin: 0 0 18px;
+
+    font-size: 14px;
+    letter-spacing: 2px;
+
+    color: #00efff;
+}
+
+.panel p {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+
+    color: #91a6c4;
+}
+
+.panel strong {
+    color: white;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+
+    margin-top: 18px;
+}
+
+button {
+    font-family: "Orbitron", sans-serif;
+
+    border: 1px solid rgba(0,230,255,.45);
+    border-radius: 10px;
+
+    background: rgba(0,150,190,.08);
+    color: #dffcff;
+
+    padding: 12px 8px;
+
+    cursor: pointer;
+
+    transition:
+        background .15s,
+        transform .1s,
+        box-shadow .15s;
+}
+
+button:hover {
+    background: rgba(0,210,255,.16);
+
+    box-shadow:
+        0 0 18px rgba(0,220,255,.15);
+}
+
+button:active {
+    transform: scale(.96);
+}
+
+/* =========================================================
+   CENTER
+========================================================= */
+
+.center {
+    width: 100%;
+}
+
+.scorebar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+
+    margin-bottom: 12px;
+}
+
+.scorebox {
+    padding: 12px;
+
+    text-align: center;
+
+    border-radius: 14px;
+
+    background: rgba(8,24,42,.9);
+    border: 1px solid rgba(0,220,255,.18);
+}
+
+.scorebox span {
+    display: block;
+
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+
+    color: #7188a7;
+}
+
+.scorebox strong {
+    display: block;
+
+    margin-top: 4px;
+
+    font-size: 20px;
+
+    color: #8ffcff;
+}
+
+/* =========================================================
+   BOARD
+========================================================= */
+
+.board-wrap {
+    position: relative;
+
+    width: 100%;
+    aspect-ratio: 1 / 1;
+
+    padding: 12px;
+
+    border-radius: 24px;
+
+    background:
+        linear-gradient(145deg,#102b3d,#071221);
+
+    border: 1px solid rgba(0,235,255,.45);
+
+    box-shadow:
+        0 0 0 1px rgba(0,220,255,.04),
+        0 20px 70px rgba(0,0,0,.5),
+        0 0 40px rgba(0,180,255,.08);
+}
+
+.board {
+    width: 100%;
+    height: 100%;
+
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+
+    gap: 10px;
+
+    touch-action: none;
+}
+
+.cell {
+    min-width: 0;
+    min-height: 0;
+
+    border-radius: 15px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(25,43,60,.9),
+            rgba(17,29,47,.9)
+        );
+
+    border: 1px solid rgba(255,255,255,.045);
+}
+
+/* =========================================================
+   TILES
+========================================================= */
+
+.tile {
+    width: 100%;
+    height: 100%;
+
+    border-radius: 15px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: clamp(28px, 6vw, 52px);
+    font-weight: 800;
+
+    user-select: none;
+
+    animation: appear .16s ease-out;
+}
+
+@keyframes appear {
+    0% {
+        transform: scale(.55);
+        opacity: 0;
+    }
+
+    70% {
+        transform: scale(1.06);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* tile colors */
+
+.tile-2 {
+    background: linear-gradient(145deg,#0c687e,#087f97);
+    color: #a8fbff;
+
+    box-shadow:
+        0 0 22px rgba(0,220,255,.22);
+}
+
+.tile-4 {
+    background: linear-gradient(145deg,#3446a7,#515ed3);
+    color: white;
+
+    box-shadow:
+        0 0 22px rgba(80,100,255,.3);
+}
+
+.tile-8 {
+    background: linear-gradient(145deg,#8a2f99,#bc39bd);
+    color: white;
+}
+
+.tile-16 {
+    background: linear-gradient(145deg,#bc2c6b,#e64283);
+    color: white;
+}
+
+.tile-32 {
+    background: linear-gradient(145deg,#d94b22,#f26a28);
+    color: white;
+}
+
+.tile-64 {
+    background: linear-gradient(145deg,#e79b18,#ffc62d);
+    color: #351b00;
+}
+
+.tile-128 {
+    background: linear-gradient(145deg,#36a847,#55db68);
+    color: white;
+
+    font-size: clamp(24px,5vw,43px);
+}
+
+.tile-256 {
+    background: linear-gradient(145deg,#0b9d73,#1ee2a2);
+    color: white;
+
+    font-size: clamp(24px,5vw,43px);
+}
+
+.tile-512 {
+    background: linear-gradient(145deg,#0086c7,#22c6ff);
+    color: white;
+
+    font-size: clamp(24px,5vw,43px);
+}
+
+.tile-1024 {
+    background: linear-gradient(145deg,#7344d5,#a46cff);
+    color: white;
+
+    font-size: clamp(20px,4.5vw,38px);
+}
+
+.tile-2048 {
+    background: linear-gradient(145deg,#e33b9b,#ff76d0);
+    color: white;
+
+    font-size: clamp(20px,4.5vw,38px);
+
+    box-shadow:
+        0 0 20px rgba(255,70,190,.55),
+        0 0 45px rgba(255,70,190,.3);
+}
+
+/* =========================================================
+   MOBILE CONTROLS
+========================================================= */
+
+.mobile-controls {
+    display: grid;
+
+    grid-template-columns: repeat(3, 60px);
+    grid-template-rows: repeat(2, 52px);
+
+    justify-content: center;
+
+    gap: 7px;
+
+    margin-top: 15px;
+}
+
+.mobile-controls button {
+    padding: 0;
+
+    font-size: 18px;
+}
+
+.up {
+    grid-column: 2;
+}
+
+.left {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.down {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.right {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+.message {
+    position: absolute;
+
+    inset: 0;
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 24px;
+
+    background: rgba(2,7,18,.84);
+
+    backdrop-filter: blur(5px);
+
+    z-index: 10;
+}
+
+.message.show {
+    display: flex;
+}
+
+.message-box {
+    text-align: center;
+
+    padding: 30px;
+}
+
+.message-box h2 {
+    margin: 0 0 12px;
+
+    color: #8ffcff;
+
+    font-size: 28px;
+}
+
+.message-box p {
+    font-family: Arial, sans-serif;
+    color: #a0b4d0;
+    margin-bottom: 20px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media(max-width:900px) {
+
+    .layout {
+        grid-template-columns: 1fr;
+
+        width: min(520px,94vw);
+
+        gap: 14px;
+    }
+
+    .panel {
+        display: none;
+    }
+
+    .game {
+        padding: 15px 0;
+    }
+
+    header {
+        margin-bottom: 15px;
+    }
+}
+
+@media(max-width:500px) {
+
+    .board-wrap {
+        padding: 8px;
+        border-radius: 18px;
+    }
+
+    .board {
+        gap: 7px;
+    }
+
+    .cell,
+    .tile {
+        border-radius: 11px;
+    }
+
+    .mobile-controls {
+        grid-template-columns: repeat(3,55px);
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+<header>
+    <h1>2048</h1>
+    <p>MERGE • THINK • REACH 2048</p>
+</header>
+
+<div class="layout">
+
+    <!-- LEFT PANEL -->
+
+    <div class="panel">
+
+        <h2>MISSION</h2>
+
+        <p>
+            Reach the legendary
+            <strong>2048</strong> tile.
+        </p>
+
+        <p>
+            Swipe the grid or use
+            arrow keys.
+        </p>
+
+        <p>
+            Equal numbers merge
+            into larger numbers.
+        </p>
+
+        <div class="controls">
+
+            <button onclick="newGame()">
+                NEW GAME
+            </button>
+
+            <button onclick="undoMove()">
+                UNDO
+            </button>
+
+            <button onclick="showHowToPlay()">
+                HOW TO PLAY
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- CENTER -->
+
+    <div class="center">
+
+        <div class="scorebar">
+
+            <div class="scorebox">
+                <span>SCORE</span>
+                <strong id="score">0</strong>
+            </div>
+
+            <div class="scorebox">
+                <span>BEST</span>
+                <strong id="best">0</strong>
+            </div>
+
+        </div>
+
+
+        <div class="board-wrap">
+
+            <div
+                id="board"
+                class="board"
+            ></div>
+
+
+            <div
+                id="message"
+                class="message"
+            >
+
+                <div class="message-box">
+
+                    <h2 id="messageTitle">
+                        GAME OVER
+                    </h2>
+
+                    <p id="messageText">
+                        No more moves.
+                    </p>
+
+                    <button onclick="newGame()">
+                        PLAY AGAIN
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- MOBILE CONTROLS -->
+
+        <div class="mobile-controls">
+
+            <button
+                class="up"
+                onclick="move('up')"
+            >
+                ▲
+            </button>
+
+            <button
+                class="left"
+                onclick="move('left')"
+            >
+                ◀
+            </button>
+
+            <button
+                class="down"
+                onclick="move('down')"
+            >
+                ▼
+            </button>
+
+            <button
+                class="right"
+                onclick="move('right')"
+            >
+                ▶
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- RIGHT PANEL -->
+
+    <div class="panel">
+
+        <h2>RULES</h2>
+
+        <p>
+            <strong>1.</strong>
+            Choose a direction.
+        </p>
+
+        <p>
+            <strong>2.</strong>
+            Tiles slide through
+            empty cells.
+        </p>
+
+        <p>
+            <strong>3.</strong>
+            Same numbers merge.
+        </p>
+
+        <p>
+            <strong>4.</strong>
+            Reach 2048 to win.
+        </p>
+
+        <button
+            onclick="resetGame()"
+            style="width:100%;margin-top:10px"
+        >
+            RESET GRID
+        </button>
+
+    </div>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+const SIZE = 4;
+
+let grid = [];
+let score = 0;
+
+let best =
+    Number(localStorage.getItem("2048-best") || 0);
+
+let history = [];
+
+let won = false;
+let gameOver = false;
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const board =
+    document.getElementById("board");
+
+const scoreEl =
+    document.getElementById("score");
+
+const bestEl =
+    document.getElementById("best");
+
+const message =
+    document.getElementById("message");
+
+const messageTitle =
+    document.getElementById("messageTitle");
+
+const messageText =
+    document.getElementById("messageText");
+
+
+/* =========================================================
+   CREATE EMPTY GRID
+========================================================= */
+
+function createEmptyGrid() {
+
+    return Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(0)
+    );
+
+}
+
+
+/* =========================================================
+   NEW GAME
+========================================================= */
+
+function newGame() {
+
+    grid = createEmptyGrid();
+
+    score = 0;
+
+    history = [];
+
+    won = false;
+    gameOver = false;
+
+    hideMessage();
+
+    addRandomTile();
+    addRandomTile();
+
+    render();
+
+}
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+function resetGame() {
+
+    newGame();
+
+}
+
+
+/* =========================================================
+   RANDOM TILE
+========================================================= */
+
+function addRandomTile() {
+
+    const empty = [];
+
+    for(let r=0;r<SIZE;r++) {
+
+        for(let c=0;c<SIZE;c++) {
+
+            if(grid[r][c] === 0) {
+
+                empty.push([r,c]);
+
+            }
+
+        }
+
+    }
+
+    if(empty.length === 0)
+        return;
+
+    const [r,c] =
+        empty[Math.floor(Math.random()*empty.length)];
+
+    grid[r][c] =
+        Math.random() < .9 ? 2 : 4;
+
+}
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function render() {
+
+    /*
+       IMPORTANT:
+
+       The board is rendered completely from the
+       current game state.
+
+       There are NO floating tile layers.
+       There are NO absolute coordinates.
+       Therefore a tile cannot escape the board.
+    */
+
+    board.innerHTML = "";
+
+    for(let r=0;r<SIZE;r++) {
+
+        for(let c=0;c<SIZE;c++) {
+
+            const cell =
+                document.createElement("div");
+
+            cell.className = "cell";
+
+            const value =
+                grid[r][c];
+
+            if(value !== 0) {
+
+                const tile =
+                    document.createElement("div");
+
+                tile.className =
+                    "tile tile-" + value;
+
+                tile.textContent =
+                    value;
+
+                cell.appendChild(tile);
+
+            }
+
+            board.appendChild(cell);
+
+        }
+
+    }
+
+    scoreEl.textContent =
+        score.toLocaleString();
+
+    bestEl.textContent =
+        best.toLocaleString();
+
+}
+
+
+/* =========================================================
+   SAVE HISTORY
+========================================================= */
+
+function saveHistory() {
+
+    history.push({
+
+        grid:
+            grid.map(row => [...row]),
+
+        score: score
+
+    });
+
+    /*
+       Keep only the latest 20 states.
+    */
+
+    if(history.length > 20)
+        history.shift();
+
+}
+
+
+/* =========================================================
+   UNDO
+========================================================= */
+
+function undoMove() {
+
+    if(history.length === 0)
+        return;
+
+    const previous =
+        history.pop();
+
+    grid =
+        previous.grid.map(row => [...row]);
+
+    score =
+        previous.score;
+
+    gameOver = false;
+
+    hideMessage();
+
+    render();
+
+}
+
+
+/* =========================================================
+   MOVE
+========================================================= */
+
+function move(direction) {
+
+    if(gameOver)
+        return;
+
+    const oldGrid =
+        grid.map(row => [...row]);
+
+    const oldScore =
+        score;
+
+    let changed = false;
+
+
+    if(direction === "left") {
+
+        for(let r=0;r<SIZE;r++) {
+
+            const result =
+                slideLine(grid[r]);
+
+            grid[r] =
+                result.line;
+
+            score +=
+                result.score;
+
+            if(result.changed)
+                changed = true;
+
+        }
+
+    }
+
+
+    else if(direction === "right") {
+
+        for(let r=0;r<SIZE;r++) {
+
+            const reversed =
+                [...grid[r]].reverse();
+
+            const result =
+                slideLine(reversed);
+
+            grid[r] =
+                result.line.reverse();
+
+            score +=
+                result.score;
+
+            if(result.changed)
+                changed = true;
+
+        }
+
+    }
+
+
+    else if(direction === "up") {
+
+        for(let c=0;c<SIZE;c++) {
+
+            const line = [];
+
+            for(let r=0;r<SIZE;r++) {
+
+                line.push(
+                    grid[r][c]
+                );
+
+            }
+
+            const result =
+                slideLine(line);
+
+            for(let r=0;r<SIZE;r++) {
+
+                grid[r][c] =
+                    result.line[r];
+
+            }
+
+            score +=
+                result.score;
+
+            if(result.changed)
+                changed = true;
+
+        }
+
+    }
+
+
+    else if(direction === "down") {
+
+        for(let c=0;c<SIZE;c++) {
+
+            const line = [];
+
+            for(let r=0;r<SIZE;r++) {
+
+                line.push(
+                    grid[r][c]
+                );
+
+            }
+
+            line.reverse();
+
+            const result =
+                slideLine(line);
+
+            result.line.reverse();
+
+            for(let r=0;r<SIZE;r++) {
+
+                grid[r][c] =
+                    result.line[r];
+
+            }
+
+            score +=
+                result.score;
+
+            if(result.changed)
+                changed = true;
+
+        }
+
+    }
+
+
+    /*
+       NOTHING MOVED
+
+       Do not add a tile.
+       Do not change score.
+       Do not save history.
+    */
+
+    if(!changed) {
+
+        grid =
+            oldGrid;
+
+        score =
+            oldScore;
+
+        return;
+
+    }
+
+
+    /* Save previous state AFTER confirming valid move */
+
+    history.push({
+
+        grid: oldGrid,
+
+        score: oldScore
+
+    });
+
+    if(history.length > 20)
+        history.shift();
+
+
+    /* Add exactly ONE new tile */
+
+    addRandomTile();
+
+
+    /* Update best */
+
+    if(score > best) {
+
+        best = score;
+
+        localStorage.setItem(
+            "2048-best",
+            best
+        );
+
+    }
+
+
+    render();
+
+
+    /* Check win */
+
+    if(!won && contains2048()) {
+
+        won = true;
+
+        showMessage(
+            "YOU REACHED 2048!",
+            "Legendary move. Keep playing or start again."
+        );
+
+        return;
+
+    }
+
+
+    /* Check game over */
+
+    if(!canMove()) {
+
+        gameOver = true;
+
+        showMessage(
+            "GAME OVER",
+            "There are no more valid moves."
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SLIDE ONE LINE
+========================================================= */
+
+/*
+   This is the actual 2048 algorithm.
+
+   Example:
+
+       [2,0,0,4]
+
+   becomes
+
+       [2,4,0,0]
+
+   Example:
+
+       [2,0,0,2]
+
+   becomes
+
+       [4,0,0,0]
+
+   Example:
+
+       [2,2,2,0]
+
+   becomes
+
+       [4,2,0,0]
+
+   NOT:
+
+       [8,0,0,0]
+
+   This prevents a tile from merging twice
+   during the same move.
+*/
+
+function slideLine(line) {
+
+    const original =
+        [...line];
+
+    /* Remove empty cells */
+
+    let numbers =
+        line.filter(value => value !== 0);
+
+    let result = [];
+
+    let gained = 0;
+
+
+    for(let i=0;i<numbers.length;i++) {
+
+        /*
+           If the current tile and next tile
+           are equal, merge them.
+        */
+
+        if(
+            i + 1 < numbers.length &&
+            numbers[i] === numbers[i+1]
+        ) {
+
+            const merged =
+                numbers[i] * 2;
+
+            result.push(merged);
+
+            gained += merged;
+
+            i++;
+
+        }
+
+        else {
+
+            result.push(
+                numbers[i]
+            );
+
+        }
+
+    }
+
+
+    /* Fill remaining spaces */
+
+    while(result.length < SIZE) {
+
+        result.push(0);
+
+    }
+
+
+    let changed = false;
+
+    for(let i=0;i<SIZE;i++) {
+
+        if(
+            original[i] !== result[i]
+        ) {
+
+            changed = true;
+            break;
+
+        }
+
+    }
+
+
+    return {
+
+        line: result,
+
+        score: gained,
+
+        changed: changed
+
+    };
+
+}
+
+
+/* =========================================================
+   CHECK 2048
+========================================================= */
+
+function contains2048() {
+
+    for(let r=0;r<SIZE;r++) {
+
+        for(let c=0;c<SIZE;c++) {
+
+            if(grid[r][c] >= 2048)
+                return true;
+
+        }
+
+    }
+
+    return false;
+
+}
+
+
+/* =========================================================
+   CHECK VALID MOVE
+========================================================= */
+
+function canMove() {
+
+    /*
+       If there is an empty cell,
+       at least one move is possible.
+    */
+
+    for(let r=0;r<SIZE;r++) {
+
+        for(let c=0;c<SIZE;c++) {
+
+            if(grid[r][c] === 0)
+                return true;
+
+        }
+
+    }
+
+
+    /*
+       Check horizontal merges.
+    */
+
+    for(let r=0;r<SIZE;r++) {
+
+        for(let c=0;c<SIZE-1;c++) {
+
+            if(
+                grid[r][c] ===
+                grid[r][c+1]
+            ) {
+
+                return true;
+
+            }
+
+        }
+
+    }
+
+
+    /*
+       Check vertical merges.
+    */
+
+    for(let r=0;r<SIZE-1;r++) {
+
+        for(let c=0;c<SIZE;c++) {
+
+            if(
+                grid[r][c] ===
+                grid[r+1][c]
+            ) {
+
+                return true;
+
+            }
+
+        }
+
+    }
+
+
+    return false;
+
+}
+
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+function showMessage(title,text) {
+
+    messageTitle.textContent =
+        title;
+
+    messageText.textContent =
+        text;
+
+    message.classList.add("show");
+
+}
+
+
+function hideMessage() {
+
+    message.classList.remove("show");
+
+}
+
+
+/* =========================================================
+   HOW TO PLAY
+========================================================= */
+
+function showHowToPlay() {
+
+    alert(
+`2048 RULES
+
+1. Swipe or use arrow keys.
+
+2. Tiles move through empty cells.
+
+3. Two equal numbers merge.
+
+4. A merged tile cannot merge again
+   during the same move.
+
+5. A different number blocks movement.
+
+6. A new 2 or 4 appears after every
+   valid move.
+
+7. Reach 2048 to win.
+
+Example:
+
+2 . . 4  →  2 4 . .
+
+2 . . 2  →  4 . . .
+
+2 4 . .  →  2 4 . .
+
+The 2 cannot jump through the 4.`
+    );
+
+}
+
+
+/* =========================================================
+   KEYBOARD
+========================================================= */
+
+document.addEventListener(
+    "keydown",
+    function(e) {
+
+        const keys = {
+
+            ArrowLeft: "left",
+            ArrowRight: "right",
+            ArrowUp: "up",
+            ArrowDown: "down",
+
+            a: "left",
+            d: "right",
+            w: "up",
+            s: "down",
+
+            A: "left",
+            D: "right",
+            W: "up",
+            S: "down"
+
+        };
+
+        const direction =
+            keys[e.key];
+
+        if(direction) {
+
+            e.preventDefault();
+
+            move(direction);
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   REAL SWIPE DETECTION
+========================================================= */
+
+let touchStartX = 0;
+let touchStartY = 0;
+
+let touchActive = false;
+
+
+board.addEventListener(
+    "pointerdown",
+    function(e) {
+
+        touchActive = true;
+
+        touchStartX =
+            e.clientX;
+
+        touchStartY =
+            e.clientY;
+
+        /*
+           Capture pointer so that
+           leaving the board does not
+           break the gesture.
+        */
+
+        if(board.setPointerCapture) {
+
+            try {
+
+                board.setPointerCapture(
+                    e.pointerId
+                );
+
+            } catch(err) {}
+
+        }
+
+    }
+);
+
+
+board.addEventListener(
+    "pointerup",
+    function(e) {
+
+        if(!touchActive)
+            return;
+
+        touchActive = false;
+
+        const dx =
+            e.clientX - touchStartX;
+
+        const dy =
+            e.clientY - touchStartY;
+
+        const absX =
+            Math.abs(dx);
+
+        const absY =
+            Math.abs(dy);
+
+
+        /*
+           Ignore tiny movements.
+        */
+
+        const threshold = 35;
+
+        if(
+            Math.max(absX,absY) <
+            threshold
+        ) {
+
+            return;
+
+        }
+
+
+        /*
+           Dominant axis decides direction.
+
+           This prevents vertical swipes
+           from accidentally becoming
+           horizontal swipes.
+        */
+
+        if(absX > absY) {
+
+            if(dx > 0)
+                move("right");
+            else
+                move("left");
+
+        }
+
+        else {
+
+            if(dy > 0)
+                move("down");
+            else
+                move("up");
+
+        }
+
+    }
+);
+
+
+board.addEventListener(
+    "pointercancel",
+    function() {
+
+        touchActive = false;
+
+    }
+);
+
+
+/* =========================================================
+   START GAME
+========================================================= */
+
+bestEl.textContent =
+    best.toLocaleString();
+
+newGame();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Hoops Basketball</title>
+<style>
+    *{ box-sizing:border-box; }
+    body {
+        margin: 0; padding: 0;
+        background: linear-gradient(135deg, #1e272e, #2d3436);
+        color: #ecf0f1;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        min-height: 100vh;
+        user-select: none; overflow: hidden;
+        touch-action: none;
+        padding: 8px;
+    }
+    .header {
+        display: flex; justify-content: space-between;
+        width: 100%; max-width: 1100px;
+        background: rgba(0,0,0,0.45);
+        padding: 12px 25px;
+        border-radius: 10px 10px 0 0;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        border-bottom: 4px solid #e67e22;
+    }
+    .stat-box { text-align: center; }
+    .stat-label { font-size: .75rem; color: #bdc3c7; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px;}
+    .stat-value { font-size: 1.7rem; font-weight: 900; color: #fff; }
+    #lives-display { color: #e74c3c; letter-spacing: 3px; }
+    #streak-display { color: #f39c12; }
+    #game-container {
+        position: relative;
+        width: 100%; max-width: 1100px;
+        aspect-ratio: 1100 / 720;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        border-radius: 0 0 10px 10px;
+        overflow: hidden;
+        line-height: 0;
+        background: radial-gradient(circle at 50% 50%, #34495e 0%, #2c3e50 100%);
+    }
+    canvas {
+        display: block;
+        width: 100%; height: 100%;
+        cursor: crosshair;
+        touch-action: none;
+    }
+    #overlay {
+        position: absolute; inset: 0;
+        background: rgba(30, 39, 46, 0.94);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        z-index: 10; line-height: 1.2;
+    }
+    #overlay h1 {
+        font-size: 3.4rem; margin: 0 0 10px; color: #e67e22;
+        text-shadow: 0 4px 10px rgba(0,0,0,0.6);
+        text-align: center;
+    }
+    #overlay p {
+        font-size: 1.1rem; margin-bottom: 22px; color: #bdc3c7;
+        font-weight: bold; text-align: center; padding: 0 20px;
+        max-width: 480px;
+    }
+    button {
+        padding: 14px 45px;
+        background: #e67e22; color: #fff;
+        border: none; border-radius: 30px;
+        cursor: pointer;
+        font-size: 19px; font-weight: 900; font-family: inherit;
+        box-shadow: 0 6px 0 #d35400;
+        transition: all .1s;
+    }
+    button:active { transform: translateY(6px); box-shadow: 0 0 0 #d35400; }
+    #instructions {
+        margin-top: 12px; color: #95a5a6; font-size: .95rem;
+        text-align: center; padding: 0 20px;
+    }
+    .hint { color: #e67e22; font-weight: bold; }
+</style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="stat-box">
+            <div class="stat-label">Score</div>
+            <div class="stat-value" id="streak-display">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">High Score</div>
+            <div class="stat-value" id="high-score-display">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Balls Left</div>
+            <div class="stat-value" id="lives-display">🏀🏀🏀</div>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="1100" height="720"></canvas>
+        <div id="overlay">
+            <h1 id="overlay-title">Pro Hoops</h1>
+            <p id="overlay-desc">Click and drag anywhere to aim. Pull back like a slingshot — longer drag = more power.</p>
+            <button onclick="startGame()">PLAY</button>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <span class="hint">Drag anywhere</span> — pull back &amp; down from the shot direction. Longer drag = more power.
+    </div>
+
+<script>
+/* ============================================================
+   PRO HOOPS — large court, refined controls
+   ============================================================ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+const streakDisplay    = document.getElementById('streak-display');
+const highScoreDisplay = document.getElementById('high-score-display');
+const livesDisplay     = document.getElementById('lives-display');
+const overlay          = document.getElementById('overlay');
+const overlayTitle     = document.getElementById('overlay-title');
+const overlayDesc      = document.getElementById('overlay-desc');
+
+/* ---------------- PHYSICS ---------------- */
+const GRAVITY     = 0.55;
+const AIR_DRAG    = 0.9955;
+const FLOOR_BOUNCE = 0.55;
+const RIM_BOUNCE   = 0.72;
+const BOARD_BOUNCE = 0.65;
+
+/* ---------------- COURT GEOMETRY ---------------- */
+const FLOOR_Y   = H - 60;              // top of the floor band
+
+const BALL_R    = 24;
+const START_X   = 190;
+const START_Y   = FLOOR_Y - BALL_R - 30; // hovering slightly above the floor
+
+/* Hoop on the right side */
+const BOARD_X   = 960;
+const BOARD_W   = 16;
+const BOARD_Y1  = 120;
+const BOARD_Y2  = 340;
+
+const RIM_Y     = 320;
+const RIM_BACK  = BOARD_X;
+const RIM_FRONT = BOARD_X - 120;       // rim opening: 120px (≈ 2.5× ball)
+const RIM_R     = 7;
+
+/* ---------------- AIMING ---------------- */
+const MAX_DRAG  = 320;
+const MIN_SPEED = 14;
+const MAX_SPEED = 34;
+const MIN_DRAG  = 20;                  // ignores tiny clicks
+
+/* ---------------- STATE ---------------- */
+let score     = 0;
+let highScore = Number(localStorage.getItem('hoops_hs') || 0);
+let lives     = 3;
+let gameState = 'START';   // START | READY | AIMING | SHOOTING | RESULT | GAMEOVER
+
+let swishStreak = 0;
+let shake       = 0;
+let roundTimer  = null;
+
+let ball = makeBall();
+let particles = [];
+let popups    = [];
+let ballTrail = [];
+
+let isDragging = false;
+let dragStart  = { x: 0, y: 0 };
+let dragCur    = { x: 0, y: 0 };
+
+/* Net mesh */
+const NET_ROWS = 6;
+const NET_COLS = 7;
+const NET_DEPTH = 78;
+const NET_TAPER = 34;
+let netNodes = [];
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function makeBall() {
+    return {
+        x: START_X, y: START_Y,
+        prevY: START_Y,
+        vx: 0, vy: 0,
+        r: BALL_R,
+        angle: 0,
+        spin: 0,
+        resolved: false,
+        scored: false,
+        rimHits: 0,
+        boardHits: 0,
+        age: 0
+    };
+}
+
+function updateUI() {
+    streakDisplay.innerText    = score;
+    highScoreDisplay.innerText = highScore;
+    let s = '';
+    for (let i = 0; i < 3; i++) s += (i < lives) ? '🏀' : '❌';
+    livesDisplay.innerText = s;
+}
+
+/* ============================================================
+   NET
+   ============================================================ */
+function initNet() {
+    netNodes = [];
+    for (let r = 0; r <= NET_ROWS; r++) {
+        const row = [];
+        const v = r / NET_ROWS;
+        for (let c = 0; c <= NET_COLS; c++) {
+            const u = c / NET_COLS;
+            const topX = RIM_FRONT + (RIM_BACK - RIM_FRONT) * u;
+            const botX = (RIM_FRONT + NET_TAPER / 2) + (RIM_BACK - RIM_FRONT - NET_TAPER) * u;
+            const x = topX + (botX - topX) * v;
+            const y = RIM_Y + NET_DEPTH * v;
+            row.push({
+                x, y,
+                baseX: x, baseY: y,
+                vx: 0, vy: 0,
+                fixed: r === 0
+            });
+        }
+        netNodes.push(row);
+    }
+}
+
+function updateNet() {
+    for (let r = 1; r < netNodes.length; r++) {
+        for (let c = 0; c < netNodes[r].length; c++) {
+            const n = netNodes[r][c];
+
+            n.vx += (n.baseX - n.x) * 0.18;
+            n.vy += (n.baseY - n.y) * 0.18;
+            n.vx *= 0.82;
+            n.vy *= 0.82;
+            n.x  += n.vx;
+            n.y  += n.vy;
+
+            if (gameState === 'SHOOTING' && !ball.resolved) {
+                const dx = n.x - ball.x;
+                const dy = n.y - ball.y;
+                const d  = Math.hypot(dx, dy);
+                const reach = ball.r + 8;
+                if (d < reach && d > 0.01) {
+                    const force = (reach - d) * 0.4;
+                    n.vx += (dx / d) * force;
+                    n.vy += (dy / d) * force;
+                }
+            }
+        }
+    }
+}
+
+/* ============================================================
+   GAME FLOW
+   ============================================================ */
+function startGame() {
+    clearTimeout(roundTimer);
+    score = 0; lives = 3; swishStreak = 0;
+    particles = []; popups = []; ballTrail = [];
+    shake = 0;
+    initNet();
+    updateUI();
+    overlay.style.display = 'none';
+    resetRound();
+}
+
+function resetRound() {
+    clearTimeout(roundTimer);
+    roundTimer = null;
+    if (lives <= 0) { endGame(); return; }
+    ball = makeBall();
+    ballTrail = [];
+    isDragging = false;
+    gameState = 'READY';
+}
+
+function endGame() {
+    gameState = 'GAMEOVER';
+    if (score > highScore) {
+        highScore = score;
+        try { localStorage.setItem('hoops_hs', highScore); } catch (e) {}
+    }
+    updateUI();
+    overlayTitle.innerText = 'Game Over';
+    overlayDesc.innerText  = 'Final Score: ' + score + '   •   Best: ' + highScore;
+    overlay.style.display  = 'flex';
+}
+
+/* ============================================================
+   INPUT — click anywhere to start aiming
+   ============================================================ */
+function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const src = (e.touches && e.touches.length) ? e.touches[0] : e;
+    return {
+        x: (src.clientX - rect.left) * scaleX,
+        y: (src.clientY - rect.top)  * scaleY
+    };
+}
+
+function pointerDown(p) {
+    if (gameState !== 'READY') return;
+    // Ignore clicks that land directly on the hoop area
+    if (p.x > BOARD_X - 30) return;
+
+    isDragging = true;
+    dragStart  = p;
+    dragCur    = p;
+    gameState  = 'AIMING';
+}
+function pointerMove(p) {
+    if (isDragging) dragCur = p;
+}
+function pointerUp() {
+    if (isDragging && gameState === 'AIMING') shootBall();
+    isDragging = false;
+}
+
+canvas.addEventListener('mousedown', e => pointerDown(getCanvasPos(e)));
+canvas.addEventListener('mousemove', e => pointerMove(getCanvasPos(e)));
+window.addEventListener('mouseup', pointerUp);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); pointerDown(getCanvasPos(e)); }, { passive: false });
+canvas.addEventListener('touchmove',  e => { e.preventDefault(); pointerMove(getCanvasPos(e)); }, { passive: false });
+window.addEventListener('touchend',   e => { e.preventDefault(); pointerUp(); }, { passive: false });
+
+/* ============================================================
+   SHOT
+   ============================================================ */
+function getShotVector() {
+    const dx = dragStart.x - dragCur.x;   // slingshot: opposite of drag
+    const dy = dragStart.y - dragCur.y;
+    const dist = Math.hypot(dx, dy);
+    const power = Math.max(0, Math.min(1, dist / MAX_DRAG));
+    const speed = MIN_SPEED + power * (MAX_SPEED - MIN_SPEED);
+    const angle = Math.atan2(dy, dx);
+    return { dx, dy, dist, power, speed, angle };
+}
+
+function shootBall() {
+    const s = getShotVector();
+    if (s.dist < MIN_DRAG) { gameState = 'READY'; return; }
+
+    ball.vx = Math.cos(s.angle) * s.speed;
+    ball.vy = Math.sin(s.angle) * s.speed;
+    ball.spin = -ball.vx * 0.015;
+    ball.prevY = ball.y;
+    ball.resolved = false;
+    ball.scored = false;
+    ball.rimHits = 0;
+    ball.boardHits = 0;
+    ball.age = 0;
+
+    ballTrail = [];
+    gameState = 'SHOOTING';
+}
+
+/* ============================================================
+   COLLISIONS
+   ============================================================ */
+function collideRim(rimX, rimY) {
+    const dx = ball.x - rimX;
+    const dy = ball.y - rimY;
+    const d  = Math.hypot(dx, dy);
+    const minD = ball.r + RIM_R;
+    if (d < minD && d > 0.01) {
+        const nx = dx / d, ny = dy / d;
+        ball.x = rimX + nx * minD;
+        ball.y = rimY + ny * minD;
+        const dot = ball.vx * nx + ball.vy * ny;
+        ball.vx = (ball.vx - 2 * dot * nx) * RIM_BOUNCE;
+        ball.vy = (ball.vy - 2 * dot * ny) * RIM_BOUNCE;
+        ball.spin += (Math.random() - 0.5) * 0.3;
+        ball.rimHits++;
+        shake = Math.max(shake, 6);
+        createParticles(rimX, rimY, '#e67e22', 5);
+        for (let r = 1; r < netNodes.length; r++) {
+            for (const n of netNodes[r]) {
+                n.vx += (Math.random() - 0.5) * 3;
+                n.vy += (Math.random() - 0.5) * 2;
+            }
+        }
+    }
+}
+
+function collideBoard() {
+    const withinY = ball.y > BOARD_Y1 - ball.r && ball.y < BOARD_Y2 + ball.r;
+    const nearX   = ball.x + ball.r > BOARD_X && ball.x < BOARD_X + BOARD_W;
+    if (withinY && nearX && ball.vx > 0) {
+        ball.x = BOARD_X - ball.r;
+        ball.vx = -ball.vx * BOARD_BOUNCE;
+        ball.boardHits++;
+        shake = Math.max(shake, 8);
+        createParticles(BOARD_X, ball.y, '#ecf0f1', 6);
+    }
+    if (ball.x > BOARD_X - ball.r && ball.x < BOARD_X + BOARD_W + ball.r &&
+        ball.y + ball.r > BOARD_Y1 && ball.y < BOARD_Y1 && ball.vy > 0) {
+        ball.y = BOARD_Y1 - ball.r;
+        ball.vy = -ball.vy * BOARD_BOUNCE;
+        ball.boardHits++;
+    }
+    if (ball.x > BOARD_X - ball.r && ball.x < BOARD_X + BOARD_W + ball.r &&
+        ball.y - ball.r < BOARD_Y2 && ball.y > BOARD_Y2 && ball.vy < 0) {
+        ball.y = BOARD_Y2 + ball.r;
+        ball.vy = -ball.vy * BOARD_BOUNCE;
+    }
+}
+
+/* ============================================================
+   UPDATE BALL
+   ============================================================ */
+function updateBall() {
+    if (gameState !== 'SHOOTING') return;
+
+    ball.prevY = ball.y;
+    ball.vx *= AIR_DRAG;
+    ball.vy *= AIR_DRAG;
+    ball.vy += GRAVITY;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    ball.angle += ball.spin;
+    ball.age++;
+
+    ballTrail.push({ x: ball.x, y: ball.y });
+    if (ballTrail.length > 18) ballTrail.shift();
+
+    /* Score check: crossing rim plane going down, inside the hoop */
+    if (!ball.resolved) {
+        const crossedDown = ball.prevY < RIM_Y && ball.y >= RIM_Y && ball.vy > 0;
+        const fitsThrough = (ball.x - ball.r * 0.25) > RIM_FRONT &&
+                            (ball.x + ball.r * 0.25) < RIM_BACK;
+        if (crossedDown && fitsThrough) {
+            registerScore();
+        }
+    }
+
+    collideBoard();
+    collideRim(RIM_FRONT, RIM_Y);
+    collideRim(RIM_BACK,  RIM_Y);
+
+    /* Floor */
+    if (ball.y + ball.r > FLOOR_Y) {
+        ball.y = FLOOR_Y - ball.r;
+        if (Math.abs(ball.vy) > 1.4) {
+            ball.vy = -ball.vy * FLOOR_BOUNCE;
+            ball.vx *= 0.85;
+            ball.spin *= 0.7;
+            createParticles(ball.x, FLOOR_Y - 4, '#8b5a2b', 5);
+        } else {
+            ball.vy = 0;
+            ball.vx *= 0.9;
+        }
+        if (!ball.resolved) registerMiss('MISS!');
+    }
+
+    /* Out of bounds */
+    if (ball.x < -100 || ball.x > W + 100) {
+        if (!ball.resolved) registerMiss('OUT!');
+    }
+    if (ball.y < -250) {
+        if (!ball.resolved) registerMiss('AIR BALL!');
+    }
+    if (!ball.resolved && ball.age > 320) {
+        registerMiss('MISS!');
+    }
+}
+
+/* ============================================================
+   SCORING
+   ============================================================ */
+function registerScore() {
+    ball.resolved = true;
+    ball.scored = true;
+
+    let msg, color, points;
+    if (ball.rimHits === 0 && ball.boardHits === 0) {
+        swishStreak++;
+        if (swishStreak >= 2) {
+            msg = 'SWISH x' + swishStreak + '!';
+            points = 2; color = '#f39c12';
+        } else {
+            msg = 'SWISH!'; points = 1; color = '#3498db';
+        }
+    } else {
+        swishStreak = 0;
+        msg = 'SCORE!'; points = 1; color = '#2ecc71';
+    }
+
+    score += points;
+    updateUI();
+
+    createPopup(msg, (RIM_FRONT + RIM_BACK) / 2, RIM_Y - 60, color, 46);
+    createParticles(ball.x, RIM_Y + 30, '#ecf0f1', 26);
+    shake = 10;
+
+    for (let r = 1; r < netNodes.length; r++) {
+        for (const n of netNodes[r]) {
+            const dx = n.x - ball.x;
+            const d  = Math.max(1, Math.hypot(dx, n.y - ball.y));
+            n.vx += (dx / d) * 6 + (Math.random() - 0.5) * 2;
+            n.vy += 4 + Math.random() * 3;
+        }
+    }
+
+    gameState = 'RESULT';
+    roundTimer = setTimeout(resetRound, 1400);
+}
+
+function registerMiss(text) {
+    ball.resolved = true;
+    swishStreak = 0;
+    lives--;
+    updateUI();
+    createPopup(text, W / 2, 220, '#e74c3c', 52);
+    shake = Math.max(shake, 5);
+    gameState = 'RESULT';
+    roundTimer = setTimeout(resetRound, 1300);
+}
+
+/* ============================================================
+   PARTICLES / POPUPS
+   ============================================================ */
+function createParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.5) * 8 - 1,
+            life: 1, color,
+            size: Math.random() * 4 + 2
+        });
+    }
+}
+function updateAndDrawParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy; p.vy += 0.24;
+        p.vx *= 0.98;
+        p.life -= 0.02;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function createPopup(text, x, y, color, size) {
+    popups.push({ text, x, y, color, size, life: 1, scale: 0.1 });
+}
+function drawPopups() {
+    for (let i = popups.length - 1; i >= 0; i--) {
+        const p = popups[i];
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        p.scale += (1 - p.scale) * 0.2;
+        ctx.translate(p.x, p.y);
+        ctx.scale(p.scale, p.scale);
+        ctx.font = '900 ' + p.size + 'px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 7;
+        ctx.strokeStyle = '#1e272e';
+        ctx.strokeText(p.text, 0, 0);
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.text, 0, 0);
+        ctx.restore();
+        p.y -= 1.3;
+        p.life -= 0.014;
+        if (p.life <= 0) popups.splice(i, 1);
+    }
+}
+
+/* ============================================================
+   DRAW — ENVIRONMENT
+   ============================================================ */
+function drawEnvironment() {
+    // Back wall
+    const bg = ctx.createLinearGradient(0, 0, 0, FLOOR_Y);
+    bg.addColorStop(0, '#3a4a5a');
+    bg.addColorStop(1, '#26323d');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, FLOOR_Y);
+
+    // Spotlight
+    const spot = ctx.createRadialGradient(450, 120, 60, 450, 120, 620);
+    spot.addColorStop(0, 'rgba(255,255,255,0.12)');
+    spot.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = spot;
+    ctx.fillRect(0, 0, W, FLOOR_Y);
+
+    // Wall court line
+    ctx.strokeStyle = 'rgba(230,126,34,0.14)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 130 + i * 90);
+        ctx.lineTo(W, 130 + i * 90);
+        ctx.stroke();
+    }
+
+    // Floor
+    const floor = ctx.createLinearGradient(0, FLOOR_Y, 0, H);
+    floor.addColorStop(0, '#a06a34');
+    floor.addColorStop(1, '#5a3a1a');
+    ctx.fillStyle = floor;
+    ctx.fillRect(0, FLOOR_Y, W, H - FLOOR_Y);
+
+    // Floor planks
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 70) {
+        ctx.beginPath();
+        ctx.moveTo(x, FLOOR_Y);
+        ctx.lineTo(x - 40, H);
+        ctx.stroke();
+    }
+
+    // Floor top edge
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(0, FLOOR_Y, W, 4);
+    ctx.strokeStyle = '#e67e22';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, FLOOR_Y);
+    ctx.lineTo(W, FLOOR_Y);
+    ctx.stroke();
+}
+
+/* ============================================================
+   DRAW — HOOP
+   ============================================================ */
+function drawHoopBack() {
+    // Support arm from the wall
+    ctx.fillStyle = '#54606b';
+    ctx.fillRect(BOARD_X + BOARD_W, BOARD_Y1 + 90, W - BOARD_X - BOARD_W, 26);
+    ctx.fillStyle = '#3d4852';
+    ctx.fillRect(BOARD_X + BOARD_W, BOARD_Y1 + 90, W - BOARD_X - BOARD_W, 5);
+
+    // Board shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(BOARD_X + 5, BOARD_Y1 + 5, BOARD_W, BOARD_Y2 - BOARD_Y1);
+
+    // Board
+    const boardGrad = ctx.createLinearGradient(BOARD_X, 0, BOARD_X + BOARD_W, 0);
+    boardGrad.addColorStop(0, 'rgba(255,255,255,0.95)');
+    boardGrad.addColorStop(1, 'rgba(210,220,230,0.85)');
+    ctx.fillStyle = boardGrad;
+    ctx.fillRect(BOARD_X, BOARD_Y1, BOARD_W, BOARD_Y2 - BOARD_Y1);
+
+    // Board frame
+    ctx.strokeStyle = 'rgba(120,140,160,0.6)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(BOARD_X + 1, BOARD_Y1 + 1, BOARD_W - 2, BOARD_Y2 - BOARD_Y1 - 2);
+
+    // Inner square
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(BOARD_X + 1, RIM_Y - 70, BOARD_W - 2, 70);
+
+    // Back rim (behind ball)
+    ctx.strokeStyle = '#b9392a';
+    ctx.lineWidth = RIM_R * 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(RIM_FRONT + 62, RIM_Y);
+    ctx.lineTo(RIM_BACK, RIM_Y);
+    ctx.stroke();
+
+    // Back half of net (behind ball)
+    drawNetLines(false);
+}
+
+function drawHoopFront() {
+    drawNetLines(true);
+
+    // Front rim (over ball)
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = RIM_R * 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(RIM_FRONT, RIM_Y);
+    ctx.lineTo(RIM_FRONT + 62, RIM_Y);
+    ctx.stroke();
+
+    // Highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(RIM_FRONT, RIM_Y - 3);
+    ctx.lineTo(RIM_FRONT + 62, RIM_Y - 3);
+    ctx.stroke();
+}
+
+function drawNetLines(front) {
+    ctx.strokeStyle = 'rgba(236, 240, 241, 0.75)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+
+    for (let r = 0; r < netNodes.length - 1; r++) {
+        for (let c = 0; c < netNodes[r].length; c++) {
+            const isFront = (c >= NET_COLS / 2);
+            if (front !== isFront) continue;
+
+            if (c < netNodes[r].length - 1) {
+                ctx.moveTo(netNodes[r][c].x, netNodes[r][c].y);
+                ctx.lineTo(netNodes[r + 1][c + 1].x, netNodes[r + 1][c + 1].y);
+
+                ctx.moveTo(netNodes[r][c + 1].x, netNodes[r][c + 1].y);
+                ctx.lineTo(netNodes[r + 1][c].x, netNodes[r + 1][c].y);
+            }
+        }
+    }
+    ctx.stroke();
+}
+
+/* ============================================================
+   DRAW — AIM
+   ============================================================ */
+function drawAim() {
+    if (gameState !== 'AIMING' || !isDragging) return;
+
+    const s = getShotVector();
+    if (s.dist < 6) {
+        // tiny hint at click point
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(dragStart.x, dragStart.y, 14, 0, Math.PI * 2);
+        ctx.stroke();
+        return;
+    }
+
+    /* --- trajectory preview --- */
+    let sx = ball.x, sy = ball.y;
+    let vx = Math.cos(s.angle) * s.speed;
+    let vy = Math.sin(s.angle) * s.speed;
+
+    ctx.save();
+    ctx.setLineDash([7, 11]);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    for (let i = 0; i < 60; i++) {
+        vx *= AIR_DRAG;
+        vy *= AIR_DRAG;
+        vy += GRAVITY;
+        sx += vx;
+        sy += vy;
+        if (sy > FLOOR_Y || sx > W + 40) break;
+        ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    /* --- slingshot drag line --- */
+    ctx.strokeStyle = 'rgba(231,76,60,0.75)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(dragStart.x, dragStart.y);
+    ctx.lineTo(dragCur.x, dragCur.y);
+    ctx.stroke();
+
+    // Anchor dot
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.arc(dragStart.x, dragStart.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Drag handle
+    ctx.fillStyle = 'rgba(231,76,60,0.95)';
+    ctx.beginPath();
+    ctx.arc(dragCur.x, dragCur.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    /* --- power arc near the ball --- */
+    const power = s.power;
+    const arcX = ball.x;
+    const arcY = ball.y - ball.r - 46;
+
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath();
+    ctx.arc(arcX, arcY, 30, Math.PI, Math.PI * 2);
+    ctx.stroke();
+
+    const pg = ctx.createLinearGradient(arcX - 30, 0, arcX + 30, 0);
+    pg.addColorStop(0, '#2ecc71');
+    pg.addColorStop(0.55, '#f1c40f');
+    pg.addColorStop(1, '#e74c3c');
+    ctx.strokeStyle = pg;
+    ctx.beginPath();
+    ctx.arc(arcX, arcY, 30, Math.PI, Math.PI + Math.PI * power);
+    ctx.stroke();
+
+    /* --- power label --- */
+    ctx.font = 'bold 14px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(Math.round(power * 100) + '%', arcX, arcY + 22);
+}
+
+/* ============================================================
+   DRAW — BALL
+   ============================================================ */
+function drawBall() {
+    // Trail
+    for (let i = 0; i < ballTrail.length; i++) {
+        const p = ballTrail[i];
+        const a = (i / ballTrail.length) * 0.3;
+        ctx.fillStyle = 'rgba(230, 126, 34, ' + a + ')';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, ball.r * (0.4 + 0.5 * i / ballTrail.length), 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Floor shadow
+    const gap = FLOOR_Y - ball.y;
+    const t = Math.max(0, 1 - gap / 500);
+    ctx.fillStyle = 'rgba(0,0,0,' + (0.32 * t) + ')';
+    ctx.beginPath();
+    ctx.ellipse(ball.x, FLOOR_Y - 4, ball.r * (0.55 + 0.7 * t), ball.r * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(ball.x, ball.y);
+    ctx.rotate(ball.angle);
+
+    // base
+    const bg = ctx.createRadialGradient(-ball.r * 0.4, -ball.r * 0.4, 2, 0, 0, ball.r);
+    bg.addColorStop(0, '#f39c12');
+    bg.addColorStop(0.55, '#d35400');
+    bg.addColorStop(1, '#8e3d00');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // seams
+    ctx.strokeStyle = '#1e272e';
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(0, -ball.r);
+    ctx.lineTo(0, ball.r);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-ball.r, 0);
+    ctx.lineTo(ball.r, 0);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(-ball.r * 0.95, 0, ball.r * 0.85, -Math.PI / 2.2, Math.PI / 2.2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(ball.r * 0.95, 0, ball.r * 0.85, Math.PI - Math.PI / 2.2, Math.PI + Math.PI / 2.2);
+    ctx.stroke();
+
+    // outer ring
+    ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, ball.r - 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+/* ============================================================
+   MAIN LOOP
+   ============================================================ */
+function gameLoop() {
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.save();
+    if (shake > 0.4) {
+        ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+        shake *= 0.86;
+    } else {
+        shake = 0;
+    }
+
+    drawEnvironment();
+    updateNet();
+
+    drawHoopBack();
+    drawAim();
+    updateBall();
+    drawBall();
+    drawHoopFront();
+
+    updateAndDrawParticles();
+    drawPopups();
+
+    if (gameState === 'READY') {
+        ctx.font = 'bold 22px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.strokeText('Drag anywhere to aim — pull back for power', W / 2, 55);
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText('Drag anywhere to aim — pull back for power', W / 2, 55);
+    }
+
+    ctx.restore();
+    requestAnimationFrame(gameLoop);
+}
+
+updateUI();
+initNet();
+gameLoop();
+</script>
+</body>
+</html>

@@ -1,0 +1,3399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width,
+             initial-scale=1.0,
+             maximum-scale=1.0,
+             user-scalable=no"
+>
+
+<title>Gem Match-3 Adventure</title>
+
+<style>
+
+/* =========================================================
+   FONT
+========================================================= */
+
+@import url(
+    'https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&display=swap'
+);
+
+
+/* =========================================================
+   GLOBAL
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    min-height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 14px;
+
+    font-family: "Baloo 2", system-ui, sans-serif;
+
+    background: #193b31;
+
+    overflow-x: hidden;
+}
+
+
+/* =========================================================
+   GAME SCENE
+========================================================= */
+
+.scene {
+
+    width: min(1180px, 100%);
+
+    min-height: 760px;
+
+    position: relative;
+
+    overflow: hidden;
+
+    border-radius: 30px;
+
+    background:
+        linear-gradient(
+            rgba(13, 43, 35, 0.12),
+            rgba(5, 24, 25, 0.32)
+        ),
+        url("a_vibrant_colorful_polished_game_ui_screenshot_f.png");
+
+    background-size: cover;
+
+    background-position: center;
+
+    border: 5px solid #704322;
+
+    box-shadow:
+        0 25px 80px rgba(0,0,0,.48);
+}
+
+
+.scene::after {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(0,0,0,.04),
+            transparent 45%,
+            rgba(0,0,0,.18)
+        );
+}
+
+
+/* =========================================================
+   MAIN APP
+========================================================= */
+
+.app {
+
+    position: relative;
+
+    z-index: 2;
+
+    padding: 22px;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.top {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 15px;
+
+    margin-bottom: 12px;
+}
+
+
+.logo {
+
+    color: #fff3a4;
+
+    font-weight: 800;
+
+    line-height: .78;
+
+    text-transform: uppercase;
+
+    font-size: clamp(36px, 6vw, 70px);
+
+    letter-spacing: -2px;
+
+    text-shadow:
+        0 5px 0 #7d3e10,
+        0 8px 12px rgba(0,0,0,.45);
+}
+
+
+.logo span {
+
+    display: block;
+
+    color: #53e5ff;
+
+    font-size: .72em;
+
+    text-shadow:
+        0 4px 0 #176b94,
+        0 7px 12px rgba(0,0,0,.4);
+}
+
+
+.tag {
+
+    background: #fff1c9;
+
+    color: #5a3219;
+
+    padding: 8px 15px;
+
+    border-radius: 30px;
+
+    font-weight: 800;
+
+    border: 3px solid #9a6335;
+
+    box-shadow: 0 4px 0 #543016;
+
+    white-space: nowrap;
+
+    text-align: center;
+}
+
+
+/* =========================================================
+   LAYOUT
+========================================================= */
+
+.layout {
+
+    display: grid;
+
+    grid-template-columns:
+        170px
+        minmax(390px, 540px)
+        205px;
+
+    gap: 14px;
+
+    align-items: center;
+
+    justify-content: center;
+}
+
+
+/* =========================================================
+   WOOD PANELS
+========================================================= */
+
+.wood {
+
+    background:
+        linear-gradient(
+            145deg,
+            #8d5528,
+            #4d2a13
+        );
+
+    border: 4px solid #b57940;
+
+    border-radius: 20px;
+
+    box-shadow:
+        inset 0 0 0 2px #44240f,
+        0 7px 12px rgba(0,0,0,.3);
+
+    padding: 13px;
+
+    color: #fff3cf;
+}
+
+
+.stat {
+
+    margin-bottom: 10px;
+
+    text-align: center;
+}
+
+
+.stat small {
+
+    display: block;
+
+    font-size: 13px;
+
+    font-weight: 800;
+
+    letter-spacing: 1px;
+}
+
+
+.stat strong {
+
+    display: block;
+
+    background: #28160d;
+
+    border-radius: 11px;
+
+    padding: 2px;
+
+    font-size: 28px;
+
+    color: #fff;
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.side-buttons {
+
+    margin-top: 10px;
+
+    display: grid;
+
+    gap: 8px;
+}
+
+
+.side-buttons button {
+
+    border-radius: 12px;
+
+    color: white;
+
+    font-size: 17px;
+
+    border: 3px solid rgba(255,255,255,.25);
+
+    box-shadow:
+        0 4px 0 rgba(0,0,0,.3);
+
+    transition:
+        transform .1s;
+}
+
+
+.side-buttons button:active {
+
+    transform: translateY(3px);
+
+    box-shadow:
+        0 1px 0 rgba(0,0,0,.3);
+}
+
+
+.hint {
+
+    background:
+        linear-gradient(
+            #52df75,
+            #159447
+        );
+}
+
+
+.shuffle {
+
+    background:
+        linear-gradient(
+            #38bfff,
+            #1477c5
+        );
+}
+
+
+.new {
+
+    background:
+        linear-gradient(
+            #ff6958,
+            #b82d22
+        );
+}
+
+
+/* =========================================================
+   BOARD
+========================================================= */
+
+.board-shell {
+
+    padding: 12px;
+
+    border-radius: 25px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #b9a57a,
+            #5c513d
+        );
+
+    border: 5px solid #6d5b3d;
+
+    box-shadow:
+        0 10px 20px rgba(0,0,0,.4);
+}
+
+
+.board {
+
+    width: 100%;
+
+    aspect-ratio: 1;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(8, 1fr);
+
+    gap: 6px;
+
+    padding: 7px;
+
+    border-radius: 16px;
+
+    background: #29221c;
+
+    border: 3px solid #17120f;
+
+    touch-action: none;
+
+    user-select: none;
+}
+
+
+/* =========================================================
+   CELLS
+========================================================= */
+
+.cell {
+
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border: 0;
+
+    border-radius: 10px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #51483d,
+            #28231f
+        );
+
+    box-shadow:
+        inset 0 2px 2px rgba(255,255,255,.12),
+        0 2px 3px rgba(0,0,0,.4);
+
+    overflow: visible;
+
+    touch-action: none;
+
+    padding: 0;
+}
+
+
+/* =========================================================
+   GEMS
+========================================================= */
+
+.gem {
+
+    width: 72%;
+
+    height: 72%;
+
+    position: relative;
+
+    transform: rotate(45deg);
+
+    border-radius:
+        23% 42% 23% 42%;
+
+    box-shadow:
+        inset 5px 5px 8px rgba(255,255,255,.45),
+        inset -7px -8px 10px rgba(0,0,0,.22),
+        0 3px 5px rgba(0,0,0,.4);
+
+    transition:
+        transform .12s ease,
+        filter .12s ease,
+        opacity .12s ease;
+}
+
+
+.gem::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 35%;
+
+    height: 20%;
+
+    left: 15%;
+
+    top: 13%;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255,255,255,.72);
+
+    filter: blur(1px);
+}
+
+
+.gem::after {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 18%;
+
+    border:
+        2px solid rgba(255,255,255,.28);
+
+    border-radius: 35%;
+
+    transform: rotate(-45deg);
+}
+
+
+/* =========================================================
+   GEM COLORS
+========================================================= */
+
+.c0 .gem {
+
+    background:
+        linear-gradient(
+            145deg,
+            #73efff,
+            #0783df
+        );
+
+    color: #2ed9ff;
+}
+
+
+.c1 .gem {
+
+    background:
+        linear-gradient(
+            145deg,
+            #ff8ae0,
+            #c3209d
+        );
+
+    color: #ff5ccc;
+}
+
+
+.c2 .gem {
+
+    background:
+        linear-gradient(
+            145deg,
+            #fff37b,
+            #e69a0b
+        );
+
+    color: #ffd33d;
+}
+
+
+.c3 .gem {
+
+    background:
+        linear-gradient(
+            145deg,
+            #8cff9b,
+            #18a84f
+        );
+
+    color: #4cf071;
+}
+
+
+.c4 .gem {
+
+    background:
+        linear-gradient(
+            145deg,
+            #cf9aff,
+            #6728ce
+        );
+
+    color: #ad70ff;
+}
+
+
+.c5 .gem {
+
+    background:
+        linear-gradient(
+            145deg,
+            #ff8994,
+            #d92f48
+        );
+
+    color: #ff5b6a;
+}
+
+
+/* =========================================================
+   SELECTED GEM
+========================================================= */
+
+.cell.selected .gem {
+
+    transform:
+        rotate(45deg)
+        scale(1.18);
+
+    filter: brightness(1.25);
+
+    box-shadow:
+        0 0 0 3px #fff,
+        0 0 22px currentColor,
+        inset 5px 5px 8px rgba(255,255,255,.45);
+}
+
+
+/* =========================================================
+   HINT
+========================================================= */
+
+.cell.hint .gem {
+
+    animation:
+        hintPulse .55s
+        ease-in-out
+        infinite
+        alternate;
+}
+
+
+@keyframes hintPulse {
+
+    to {
+
+        transform:
+            rotate(45deg)
+            scale(1.2);
+
+        filter:
+            brightness(1.35);
+    }
+}
+
+
+/* =========================================================
+   MATCH POP
+========================================================= */
+
+.cell.removing .gem {
+
+    animation:
+        popGem .28s
+        ease
+        forwards;
+}
+
+
+@keyframes popGem {
+
+    to {
+
+        transform:
+            rotate(130deg)
+            scale(.05);
+
+        opacity: 0;
+    }
+}
+
+
+/* =========================================================
+   SWIPE MOVEMENT
+=========================================================
+
+   IMPORTANT:
+
+   The gem itself moves in the direction of the swipe.
+
+   We do NOT simply re-render and animate afterwards.
+
+   This makes vertical movement actually look vertical.
+========================================================= */
+
+.gem.dragging {
+
+    transition: none !important;
+
+    z-index: 50;
+
+    filter: brightness(1.2);
+
+    box-shadow:
+        0 0 0 3px rgba(255,255,255,.85),
+        0 0 25px currentColor,
+        inset 5px 5px 8px rgba(255,255,255,.45);
+}
+
+
+.cell.swapping .gem {
+
+    transition:
+        transform .18s
+        cubic-bezier(.25,.8,.25,1);
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.status {
+
+    grid-column: 1 / -1;
+
+    text-align: center;
+
+    margin-top: 4px;
+
+    color: white;
+
+    font-size: 20px;
+
+    font-weight: 800;
+
+    text-shadow:
+        0 2px 3px #222;
+
+    min-height: 30px;
+}
+
+
+.status .gold {
+
+    color: #ffe16a;
+}
+
+
+.combo {
+
+    color: #ffed68;
+
+    font-size: 21px;
+
+    text-align: center;
+
+    font-weight: 800;
+
+    min-height: 27px;
+
+    text-shadow:
+        0 2px 4px #5a2100;
+}
+
+
+.bottom {
+
+    margin-top: 10px;
+
+    text-align: center;
+
+    color: #fff6d9;
+
+    font-size: 14px;
+
+    font-weight: 700;
+
+    text-shadow:
+        0 2px 3px #333;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media(max-width:900px) {
+
+    .scene {
+        min-height: auto;
+    }
+
+    .layout {
+
+        grid-template-columns:
+            145px
+            minmax(330px,500px);
+
+        justify-content: center;
+    }
+
+    .right {
+
+        grid-column: 1 / -1;
+
+        max-width: 500px;
+
+        width: 100%;
+
+        margin: auto;
+    }
+}
+
+
+@media(max-width:620px) {
+
+    body {
+
+        padding: 0;
+
+        align-items: stretch;
+    }
+
+    .scene {
+
+        border-radius: 0;
+
+        border: 0;
+
+        min-height: 100vh;
+
+        background-position:
+            center top;
+    }
+
+    .app {
+
+        padding: 12px;
+    }
+
+    .logo {
+
+        font-size: 38px;
+    }
+
+    .tag {
+
+        font-size: 12px;
+
+        padding:
+            6px 9px;
+    }
+
+    .layout {
+
+        grid-template-columns: 1fr;
+
+        gap: 10px;
+    }
+
+    .left {
+        order: 2;
+    }
+
+    .center {
+        order: 1;
+    }
+
+    .right {
+        order: 3;
+    }
+
+    .wood {
+
+        padding: 9px;
+    }
+
+    .left {
+
+        display: grid;
+
+        grid-template-columns:
+            repeat(3,1fr);
+
+        gap: 6px;
+    }
+
+    .stat {
+
+        margin: 0;
+    }
+
+    .stat strong {
+
+        font-size: 23px;
+    }
+
+    .side-buttons {
+
+        grid-column: 1 / -1;
+
+        grid-template-columns:
+            repeat(3,1fr);
+    }
+
+    .rules {
+
+        font-size: 13px;
+    }
+
+    .board {
+
+        gap: 4px;
+
+        padding: 5px;
+    }
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<main class="scene">
+
+
+<div class="app">
+
+
+<!-- =====================================================
+     HEADER
+===================================================== -->
+
+<header class="top">
+
+    <div class="logo">
+
+        GEM
+
+        <span>
+            MATCH-3
+        </span>
+
+    </div>
+
+
+    <div class="tag">
+
+        💎 Small Moves
+        <br>
+        🔥 Big Combos!
+
+    </div>
+
+</header>
+
+
+
+<!-- =====================================================
+     GAME LAYOUT
+===================================================== -->
+
+<div class="layout">
+
+
+<!-- =====================================================
+     LEFT PANEL
+===================================================== -->
+
+<aside class="wood left">
+
+
+    <div class="stat">
+
+        <small>
+            SCORE
+        </small>
+
+        <strong id="score">
+            0
+        </strong>
+
+    </div>
+
+
+    <div class="stat">
+
+        <small>
+            MOVES LEFT
+        </small>
+
+        <strong id="moves">
+            30
+        </strong>
+
+    </div>
+
+
+    <div class="stat">
+
+        <small>
+            BEST
+        </small>
+
+        <strong id="best">
+            0
+        </strong>
+
+    </div>
+
+
+    <div class="side-buttons">
+
+        <button
+            class="hint"
+            id="hint"
+            type="button"
+        >
+            💡 Hint
+        </button>
+
+
+        <button
+            class="shuffle"
+            id="shuffle"
+            type="button"
+        >
+            🔀 Shuffle
+        </button>
+
+
+        <button
+            class="new"
+            id="newGame"
+            type="button"
+        >
+            ↻ New Game
+        </button>
+
+    </div>
+
+
+</aside>
+
+
+
+<!-- =====================================================
+     BOARD
+===================================================== -->
+
+<section class="center">
+
+
+    <div class="board-shell">
+
+
+        <div
+            class="board"
+            id="board"
+            aria-label="Gem Match-3 board"
+        >
+        </div>
+
+
+    </div>
+
+
+    <div
+        class="combo"
+        id="combo"
+    >
+    </div>
+
+
+</section>
+
+
+
+<!-- =====================================================
+     RULES
+===================================================== -->
+
+<aside class="wood right">
+
+
+    <div class="right-title">
+
+        📜 How to Play
+
+    </div>
+
+
+    <div class="rules">
+
+        <p>
+            💎 <b>Swipe</b> an adjacent gem horizontally
+            or vertically.
+        </p>
+
+        <p>
+            ✨ Match <b>3 or more</b> gems of the
+            same kind.
+        </p>
+
+        <p>
+            ⬇️ Matched gems disappear and new gems
+            fall down.
+        </p>
+
+        <p>
+            🔥 Bigger matches and cascades earn
+            more points.
+        </p>
+
+        <p>
+            🎯 You have <b>30 moves</b> to chase
+            your best score.
+        </p>
+
+    </div>
+
+
+</aside>
+
+
+
+<!-- =====================================================
+     STATUS
+===================================================== -->
+
+<div
+    class="status"
+    id="status"
+    aria-live="polite"
+>
+
+    Swipe a gem to make a
+    <span class="gold">
+        match!
+    </span>
+
+</div>
+
+
+</div>
+
+
+<div class="bottom">
+
+    💎 Match • Clear • Combo • Repeat 💎
+
+</div>
+
+
+</div>
+
+</main>
+
+
+
+<script>
+
+(() => {
+
+"use strict";
+
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const SIZE = 8;
+
+const TYPES = 6;
+
+const MAX_MOVES = 30;
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const boardElement =
+    document.getElementById("board");
+
+const scoreElement =
+    document.getElementById("score");
+
+const movesElement =
+    document.getElementById("moves");
+
+const bestElement =
+    document.getElementById("best");
+
+const statusElement =
+    document.getElementById("status");
+
+const comboElement =
+    document.getElementById("combo");
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let board = [];
+
+let selected = -1;
+
+let score = 0;
+
+let moves = MAX_MOVES;
+
+let best = 0;
+
+let busy = false;
+
+
+/* =========================================================
+   SWIPE STATE
+========================================================= */
+
+let swipe = {
+
+    active: false,
+
+    index: -1,
+
+    startX: 0,
+
+    startY: 0,
+
+    currentX: 0,
+
+    currentY: 0,
+
+    cellWidth: 0,
+
+    cellHeight: 0,
+
+    pointerId: null,
+
+    hasMoved: false
+};
+
+
+/* =========================================================
+   BEST SCORE
+========================================================= */
+
+try {
+
+    best =
+        Number(
+            localStorage.getItem(
+                "gemMatch3AdventureBest"
+            ) || 0
+        ) || 0;
+
+} catch (error) {
+
+    best = 0;
+}
+
+
+bestElement.textContent =
+    best;
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function wait(milliseconds) {
+
+    return new Promise(resolve => {
+
+        setTimeout(
+            resolve,
+            milliseconds
+        );
+
+    });
+}
+
+
+function getIndex(row, column) {
+
+    return row * SIZE + column;
+}
+
+
+function randomGem() {
+
+    return Math.floor(
+        Math.random() * TYPES
+    );
+}
+
+
+function areAdjacent(first, second) {
+
+    const firstRow =
+        Math.floor(first / SIZE);
+
+    const firstColumn =
+        first % SIZE;
+
+    const secondRow =
+        Math.floor(second / SIZE);
+
+    const secondColumn =
+        second % SIZE;
+
+
+    return (
+        Math.abs(firstRow - secondRow) +
+        Math.abs(firstColumn - secondColumn)
+    ) === 1;
+}
+
+
+/* =========================================================
+   INITIAL BOARD GENERATION
+========================================================= */
+
+function createsImmediateMatch(index) {
+
+    const type =
+        board[index];
+
+    const row =
+        Math.floor(index / SIZE);
+
+    const column =
+        index % SIZE;
+
+
+    let count = 1;
+
+
+    /*
+     * Horizontal
+     */
+
+    for (
+        let c = column - 1;
+        c >= 0 &&
+        board[getIndex(row,c)] === type;
+        c--
+    ) {
+
+        count++;
+
+    }
+
+
+    for (
+        let c = column + 1;
+        c < SIZE &&
+        board[getIndex(row,c)] === type;
+        c++
+    ) {
+
+        count++;
+
+    }
+
+
+    if (count >= 3) {
+
+        return true;
+
+    }
+
+
+    /*
+     * Vertical
+     */
+
+    count = 1;
+
+
+    for (
+        let r = row - 1;
+        r >= 0 &&
+        board[getIndex(r,column)] === type;
+        r--
+    ) {
+
+        count++;
+
+    }
+
+
+    for (
+        let r = row + 1;
+        r < SIZE &&
+        board[getIndex(r,column)] === type;
+        r++
+    ) {
+
+        count++;
+
+    }
+
+
+    return count >= 3;
+}
+
+
+function createBoard() {
+
+    board =
+        Array(SIZE * SIZE)
+        .fill(0);
+
+
+    for (
+        let index = 0;
+        index < board.length;
+        index++
+    ) {
+
+        do {
+
+            board[index] =
+                randomGem();
+
+        }
+        while (
+            createsImmediateMatch(index)
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   FIND MATCHES
+========================================================= */
+
+function findMatches() {
+
+    const matches =
+        new Set();
+
+
+    /*
+     * Horizontal
+     */
+
+    for (
+        let row = 0;
+        row < SIZE;
+        row++
+    ) {
+
+        let start = 0;
+
+
+        for (
+            let column = 1;
+            column <= SIZE;
+            column++
+        ) {
+
+            const same =
+                column < SIZE &&
+                board[
+                    getIndex(row,column)
+                ] ===
+                board[
+                    getIndex(row,start)
+                ];
+
+
+            if (same) {
+
+                continue;
+
+            }
+
+
+            const length =
+                column - start;
+
+
+            if (length >= 3) {
+
+                for (
+                    let c = start;
+                    c < column;
+                    c++
+                ) {
+
+                    matches.add(
+                        getIndex(row,c)
+                    );
+
+                }
+
+            }
+
+
+            start = column;
+
+        }
+
+    }
+
+
+    /*
+     * Vertical
+     */
+
+    for (
+        let column = 0;
+        column < SIZE;
+        column++
+    ) {
+
+        let start = 0;
+
+
+        for (
+            let row = 1;
+            row <= SIZE;
+            row++
+        ) {
+
+            const same =
+                row < SIZE &&
+                board[
+                    getIndex(row,column)
+                ] ===
+                board[
+                    getIndex(start,column)
+                ];
+
+
+            if (same) {
+
+                continue;
+
+            }
+
+
+            const length =
+                row - start;
+
+
+            if (length >= 3) {
+
+                for (
+                    let r = start;
+                    r < row;
+                    r++
+                ) {
+
+                    matches.add(
+                        getIndex(r,column)
+                    );
+
+                }
+
+            }
+
+
+            start = row;
+
+        }
+
+    }
+
+
+    return [...matches];
+
+}
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function render(hints = []) {
+
+    boardElement.innerHTML = "";
+
+
+    board.forEach(
+        (type,index) => {
+
+            const cell =
+                document.createElement("button");
+
+
+            cell.type =
+                "button";
+
+
+            cell.className =
+                "cell c" + type;
+
+
+            if (
+                index === selected
+            ) {
+
+                cell.classList.add(
+                    "selected"
+                );
+
+            }
+
+
+            if (
+                hints.includes(index)
+            ) {
+
+                cell.classList.add(
+                    "hint"
+                );
+
+            }
+
+
+            cell.setAttribute(
+                "aria-label",
+                `Gem ${index + 1}`
+            );
+
+
+            const gem =
+                document.createElement("span");
+
+
+            gem.className =
+                "gem";
+
+
+            cell.appendChild(
+                gem
+            );
+
+
+            /*
+             * Click fallback.
+             */
+
+            cell.addEventListener(
+                "click",
+                () => {
+
+                    /*
+                     * Ignore click generated
+                     * after an actual swipe.
+                     */
+
+                    if (
+                        swipe.hasMoved
+                    ) {
+
+                        swipe.hasMoved =
+                            false;
+
+                        return;
+
+                    }
+
+
+                    handleTap(index);
+
+                }
+            );
+
+
+            boardElement.appendChild(
+                cell
+            );
+
+        }
+    );
+
+
+    scoreElement.textContent =
+        score.toLocaleString();
+
+
+    movesElement.textContent =
+        moves;
+
+
+    bestElement.textContent =
+        best;
+
+}
+
+
+/* =========================================================
+   TAP CONTROL
+========================================================= */
+
+function handleTap(index) {
+
+    if (
+        busy ||
+        moves <= 0
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        selected === -1
+    ) {
+
+        selected =
+            index;
+
+        render();
+
+        return;
+
+    }
+
+
+    if (
+        selected === index
+    ) {
+
+        selected =
+            -1;
+
+        render();
+
+        return;
+
+    }
+
+
+    if (
+        !areAdjacent(
+            selected,
+            index
+        )
+    ) {
+
+        selected =
+            index;
+
+        render();
+
+        return;
+
+    }
+
+
+    performSwap(
+        selected,
+        index
+    );
+
+}
+
+
+/* =========================================================
+   DRAG VISUAL
+=========================================================
+
+   This is the important part.
+
+   During the swipe:
+
+   The actual gem follows the pointer.
+
+   This means:
+
+   ↓ = gem visibly moves DOWN
+   ↑ = gem visibly moves UP
+   → = gem visibly moves RIGHT
+   ← = gem visibly moves LEFT
+
+========================================================= */
+
+function updateDraggingGem() {
+
+    if (
+        !swipe.active
+    ) {
+
+        return;
+
+    }
+
+
+    const cell =
+        boardElement.children[
+            swipe.index
+        ];
+
+
+    if (!cell) {
+
+        return;
+
+    }
+
+
+    const gem =
+        cell.querySelector(
+            ".gem"
+        );
+
+
+    if (!gem) {
+
+        return;
+
+    }
+
+
+    const dx =
+        swipe.currentX -
+        swipe.startX;
+
+
+    const dy =
+        swipe.currentY -
+        swipe.startY;
+
+
+    /*
+     * Limit movement to roughly
+     * one cell.
+     */
+
+    const maxX =
+        swipe.cellWidth *
+        0.95;
+
+
+    const maxY =
+        swipe.cellHeight *
+        0.95;
+
+
+    const limitedX =
+        Math.max(
+            -maxX,
+            Math.min(
+                maxX,
+                dx
+            )
+        );
+
+
+    const limitedY =
+        Math.max(
+            -maxY,
+            Math.min(
+                maxY,
+                dy
+            )
+        );
+
+
+    /*
+     * Keep the normal 45° gem rotation
+     * while translating it.
+     */
+
+    gem.style.transform =
+        `translate(${limitedX}px, ${limitedY}px)
+         rotate(45deg)
+         scale(1.10)`;
+
+
+    gem.classList.add(
+        "dragging"
+    );
+
+
+    /*
+     * Highlight the gem.
+     */
+
+    cell.style.zIndex =
+        "100";
+
+}
+
+
+/* =========================================================
+   RESET DRAG VISUAL
+========================================================= */
+
+function resetDraggingVisual(index) {
+
+    const cell =
+        boardElement.children[index];
+
+
+    if (!cell) {
+
+        return;
+
+    }
+
+
+    const gem =
+        cell.querySelector(
+            ".gem"
+        );
+
+
+    if (!gem) {
+
+        return;
+
+    }
+
+
+    gem.classList.remove(
+        "dragging"
+    );
+
+
+    gem.style.transform =
+        "";
+
+
+    cell.style.zIndex =
+        "";
+
+}
+
+
+/* =========================================================
+   GET SWIPE TARGET
+========================================================= */
+
+function getSwipeTarget(
+    startIndex,
+    dx,
+    dy
+) {
+
+    const row =
+        Math.floor(
+            startIndex / SIZE
+        );
+
+
+    const column =
+        startIndex % SIZE;
+
+
+    let target =
+        -1;
+
+
+    let direction =
+        "";
+
+
+    /*
+     * Horizontal is dominant.
+     */
+
+    if (
+        Math.abs(dx) >
+        Math.abs(dy)
+    ) {
+
+
+        if (
+            dx > 0
+        ) {
+
+            /*
+             * RIGHT
+             */
+
+            if (
+                column <
+                SIZE - 1
+            ) {
+
+                target =
+                    getIndex(
+                        row,
+                        column + 1
+                    );
+
+                direction =
+                    "right";
+
+            }
+
+        }
+        else {
+
+            /*
+             * LEFT
+             */
+
+            if (
+                column > 0
+            ) {
+
+                target =
+                    getIndex(
+                        row,
+                        column - 1
+                    );
+
+                direction =
+                    "left";
+
+            }
+
+        }
+
+    }
+
+    /*
+     * Vertical is dominant.
+     */
+
+    else {
+
+
+        if (
+            dy > 0
+        ) {
+
+            /*
+             * DOWN
+             */
+
+            if (
+                row <
+                SIZE - 1
+            ) {
+
+                target =
+                    getIndex(
+                        row + 1,
+                        column
+                    );
+
+                direction =
+                    "down";
+
+            }
+
+        }
+        else {
+
+            /*
+             * UP
+             */
+
+            if (
+                row > 0
+            ) {
+
+                target =
+                    getIndex(
+                        row - 1,
+                        column
+                    );
+
+                direction =
+                    "up";
+
+            }
+
+        }
+
+    }
+
+
+    return {
+        target,
+        direction
+    };
+
+}
+
+
+/* =========================================================
+   COMMIT SWAP AFTER REAL DRAG
+========================================================= */
+
+async function finishSwipe(
+    start,
+    target,
+    direction
+) {
+
+    if (
+        busy
+    ) {
+
+        return;
+
+    }
+
+
+    busy =
+        true;
+
+
+    /*
+     * Animate the dragged gem
+     * the remaining distance.
+     */
+
+    const startCell =
+        boardElement.children[
+            start
+        ];
+
+
+    const targetCell =
+        boardElement.children[
+            target
+        ];
+
+
+    if (
+        startCell &&
+        targetCell
+    ) {
+
+        const startGem =
+            startCell.querySelector(
+                ".gem"
+            );
+
+
+        const targetGem =
+            targetCell.querySelector(
+                ".gem"
+            );
+
+
+        if (
+            startGem &&
+            targetGem
+        ) {
+
+            const startRow =
+                Math.floor(
+                    start / SIZE
+                );
+
+
+            const startColumn =
+                start % SIZE;
+
+
+            const targetRow =
+                Math.floor(
+                    target / SIZE
+                );
+
+
+            const targetColumn =
+                target % SIZE;
+
+
+            const rowDifference =
+                targetRow -
+                startRow;
+
+
+            const columnDifference =
+                targetColumn -
+                startColumn;
+
+
+            const distanceX =
+                columnDifference *
+                swipe.cellWidth;
+
+
+            const distanceY =
+                rowDifference *
+                swipe.cellHeight;
+
+
+            startGem.style.transition =
+                "transform .18s cubic-bezier(.25,.8,.25,1)";
+
+
+            targetGem.style.transition =
+                "transform .18s cubic-bezier(.25,.8,.25,1)";
+
+
+            /*
+             * The two gems physically
+             * move toward each other.
+             */
+
+            startGem.style.transform =
+                `translate(${distanceX}px, ${distanceY}px)
+                 rotate(45deg)
+                 scale(1.10)`;
+
+
+            targetGem.style.transform =
+                `translate(${-distanceX}px, ${-distanceY}px)
+                 rotate(45deg)
+                 scale(1.10)`;
+
+        }
+
+    }
+
+
+    await wait(190);
+
+
+    /*
+     * Now actually exchange the
+     * underlying game values.
+     */
+
+    [
+        board[start],
+        board[target]
+    ] =
+    [
+        board[target],
+        board[start]
+    ];
+
+
+    /*
+     * Remove selected state.
+     */
+
+    selected =
+        -1;
+
+
+    render();
+
+
+    await wait(80);
+
+
+    const found =
+        findMatches();
+
+
+    /*
+     * Invalid move.
+     */
+
+    if (
+        found.length === 0
+    ) {
+
+        /*
+         * Reverse the underlying swap.
+         */
+
+        [
+            board[start],
+            board[target]
+        ] =
+        [
+            board[target],
+            board[start]
+        ];
+
+
+        render();
+
+
+        statusElement.textContent =
+            "↩️ No match — swipe undone!";
+
+
+        await wait(400);
+
+
+        busy =
+            false;
+
+
+        statusElement.innerHTML =
+            'Swipe a gem to make a <span class="gold">match!</span>';
+
+
+        return;
+
+    }
+
+
+    /*
+     * Valid move.
+     */
+
+    moves--;
+
+    render();
+
+
+    await clearMatches(
+        found
+    );
+
+
+    busy =
+        false;
+
+
+    if (
+        moves <= 0
+    ) {
+
+        statusElement.textContent =
+            `🏁 Out of moves! Final score: ${score.toLocaleString()}`;
+
+    }
+    else {
+
+        statusElement.innerHTML =
+            '✨ Nice! Keep the <span class="gold">combos</span> going!';
+
+    }
+
+}
+
+
+/* =========================================================
+   CLICK / NON-SWIPE SWAP
+========================================================= */
+
+async function performSwap(
+    first,
+    second
+) {
+
+    if (
+        busy ||
+        moves <= 0
+    ) {
+
+        return;
+
+    }
+
+
+    busy =
+        true;
+
+
+    selected =
+        -1;
+
+
+    [
+        board[first],
+        board[second]
+    ] =
+    [
+        board[second],
+        board[first]
+    ];
+
+
+    render();
+
+
+    await wait(180);
+
+
+    const found =
+        findMatches();
+
+
+    if (
+        found.length === 0
+    ) {
+
+        [
+            board[first],
+            board[second]
+        ] =
+        [
+            board[second],
+            board[first]
+        ];
+
+
+        render();
+
+
+        statusElement.textContent =
+            "↩️ No match — swap undone!";
+
+
+        await wait(400);
+
+
+        busy =
+            false;
+
+
+        statusElement.innerHTML =
+            'Swipe a gem to make a <span class="gold">match!</span>';
+
+
+        return;
+
+    }
+
+
+    moves--;
+
+    render();
+
+
+    await clearMatches(
+        found
+    );
+
+
+    busy =
+        false;
+
+
+    if (
+        moves <= 0
+    ) {
+
+        statusElement.textContent =
+            `🏁 Out of moves! Final score: ${score.toLocaleString()}`;
+
+    }
+    else {
+
+        statusElement.innerHTML =
+            '✨ Nice! Keep the <span class="gold">combos</span> going!';
+
+    }
+
+}
+
+
+/* =========================================================
+   CLEAR MATCHES
+========================================================= */
+
+async function clearMatches(
+    initialMatches
+) {
+
+    let combo = 0;
+
+    let currentMatches =
+        initialMatches;
+
+
+    while (
+        currentMatches.length
+    ) {
+
+        combo++;
+
+
+        const gained =
+            Math.round(
+                currentMatches.length *
+                100 *
+                (
+                    1 +
+                    (combo - 1) *
+                    0.6
+                )
+            )
+            +
+            (
+                currentMatches.length >= 4
+                    ? 250
+                    : 0
+            )
+            +
+            (
+                currentMatches.length >= 5
+                    ? 500
+                    : 0
+            );
+
+
+        score +=
+            gained;
+
+
+        if (
+            combo > 1
+        ) {
+
+            comboElement.textContent =
+                `🔥 ${combo}× COMBO! +${gained}`;
+
+        }
+        else {
+
+            comboElement.textContent =
+                `✨ +${gained} POINTS`;
+
+        }
+
+
+        /*
+         * Pop animation.
+         */
+
+        currentMatches.forEach(
+            index => {
+
+                if (
+                    boardElement
+                        .children[index]
+                ) {
+
+                    boardElement
+                        .children[index]
+                        .classList
+                        .add("removing");
+
+                }
+
+            }
+        );
+
+
+        await wait(280);
+
+
+        /*
+         * Remove.
+         */
+
+        currentMatches.forEach(
+            index => {
+
+                board[index] =
+                    -1;
+
+            }
+        );
+
+
+        /*
+         * Gravity.
+         */
+
+        dropGems();
+
+
+        render();
+
+
+        await wait(220);
+
+
+        /*
+         * Cascade.
+         */
+
+        currentMatches =
+            findMatches();
+
+    }
+
+
+    comboElement.textContent =
+        "";
+
+
+    if (
+        score > best
+    ) {
+
+        best =
+            score;
+
+
+        try {
+
+            localStorage.setItem(
+                "gemMatch3AdventureBest",
+                String(best)
+            );
+
+        }
+        catch (error) {}
+
+    }
+
+
+    render();
+
+}
+
+
+/* =========================================================
+   GRAVITY
+========================================================= */
+
+function dropGems() {
+
+    for (
+        let column = 0;
+        column < SIZE;
+        column++
+    ) {
+
+        let writeRow =
+            SIZE - 1;
+
+
+        /*
+         * Existing gems fall down.
+         */
+
+        for (
+            let row = SIZE - 1;
+            row >= 0;
+            row--
+        ) {
+
+            const value =
+                board[
+                    getIndex(
+                        row,
+                        column
+                    )
+                ];
+
+
+            if (
+                value !== -1
+            ) {
+
+                board[
+                    getIndex(
+                        writeRow,
+                        column
+                    )
+                ] =
+                    value;
+
+
+                writeRow--;
+
+            }
+
+        }
+
+
+        /*
+         * New gems.
+         */
+
+        while (
+            writeRow >= 0
+        ) {
+
+            board[
+                getIndex(
+                    writeRow,
+                    column
+                )
+            ] =
+                randomGem();
+
+
+            writeRow--;
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   POSSIBLE MOVE
+========================================================= */
+
+function findPossibleMove() {
+
+    for (
+        let index = 0;
+        index < SIZE * SIZE;
+        index++
+    ) {
+
+        const row =
+            Math.floor(
+                index / SIZE
+            );
+
+
+        const column =
+            index % SIZE;
+
+
+        /*
+         * Only right/down are needed
+         * because left/up are duplicates.
+         */
+
+        const directions = [
+            [1,0],
+            [0,1]
+        ];
+
+
+        for (
+            const [dr,dc]
+            of directions
+        ) {
+
+            const newRow =
+                row + dr;
+
+
+            const newColumn =
+                column + dc;
+
+
+            if (
+                newRow >= SIZE ||
+                newColumn >= SIZE
+            ) {
+
+                continue;
+
+            }
+
+
+            const other =
+                getIndex(
+                    newRow,
+                    newColumn
+                );
+
+
+            [
+                board[index],
+                board[other]
+            ] =
+            [
+                board[other],
+                board[index]
+            ];
+
+
+            const possible =
+                findMatches().length > 0;
+
+
+            [
+                board[index],
+                board[other]
+            ] =
+            [
+                board[other],
+                board[index]
+            ];
+
+
+            if (
+                possible
+            ) {
+
+                return [
+                    index,
+                    other
+                ];
+
+            }
+
+        }
+
+    }
+
+
+    return null;
+
+}
+
+
+/* =========================================================
+   SHUFFLE
+========================================================= */
+
+async function shuffleBoard() {
+
+    if (
+        busy ||
+        moves <= 0
+    ) {
+
+        return;
+
+    }
+
+
+    busy =
+        true;
+
+
+    selected =
+        -1;
+
+
+    let attempts =
+        0;
+
+
+    do {
+
+        board.sort(
+            () =>
+                Math.random() - .5
+        );
+
+
+        attempts++;
+
+    }
+    while (
+        (
+            findMatches().length ||
+            !findPossibleMove()
+        )
+        &&
+        attempts < 100
+    );
+
+
+    render();
+
+
+    statusElement.textContent =
+        "🔀 Board shuffled!";
+
+
+    await wait(450);
+
+
+    busy =
+        false;
+
+
+    statusElement.innerHTML =
+        'Swipe a gem to make a <span class="gold">match!</span>';
+
+}
+
+
+/* =========================================================
+   HINT
+========================================================= */
+
+async function showHint() {
+
+    if (
+        busy ||
+        moves <= 0
+    ) {
+
+        return;
+
+    }
+
+
+    const possible =
+        findPossibleMove();
+
+
+    if (
+        !possible
+    ) {
+
+        await shuffleBoard();
+
+        return;
+
+    }
+
+
+    render(
+        possible
+    );
+
+
+    statusElement.textContent =
+        "💡 Try swiping these highlighted gems!";
+
+
+    await wait(1300);
+
+
+    render();
+
+
+    statusElement.innerHTML =
+        'Swipe a gem to make a <span class="gold">match!</span>';
+
+}
+
+
+/* =========================================================
+   NEW GAME
+========================================================= */
+
+function newGame() {
+
+    score =
+        0;
+
+    moves =
+        MAX_MOVES;
+
+    selected =
+        -1;
+
+    busy =
+        false;
+
+    comboElement.textContent =
+        "";
+
+
+    createBoard();
+
+    render();
+
+
+    statusElement.innerHTML =
+        'Swipe a gem to make a <span class="gold">match!</span>';
+
+}
+
+
+/* =========================================================
+   POINTER DOWN
+========================================================= */
+
+boardElement.addEventListener(
+    "pointerdown",
+    event => {
+
+        if (
+            busy ||
+            moves <= 0
+        ) {
+
+            return;
+
+        }
+
+
+        const cell =
+            event.target.closest(
+                ".cell"
+            );
+
+
+        if (!cell) {
+
+            return;
+
+        }
+
+
+        const index =
+            Array
+                .from(
+                    boardElement.children
+                )
+                .indexOf(cell);
+
+
+        if (
+            index < 0
+        ) {
+
+            return;
+
+        }
+
+
+        /*
+         * Get the actual size
+         * of one board cell.
+         */
+
+        const rectangle =
+            cell.getBoundingClientRect();
+
+
+        swipe.active =
+            true;
+
+
+        swipe.index =
+            index;
+
+
+        swipe.startX =
+            event.clientX;
+
+
+        swipe.startY =
+            event.clientY;
+
+
+        swipe.currentX =
+            event.clientX;
+
+
+        swipe.currentY =
+            event.clientY;
+
+
+        swipe.cellWidth =
+            rectangle.width;
+
+
+        swipe.cellHeight =
+            rectangle.height;
+
+
+        swipe.pointerId =
+            event.pointerId;
+
+
+        swipe.hasMoved =
+            false;
+
+
+        try {
+
+            boardElement.setPointerCapture(
+                event.pointerId
+            );
+
+        }
+        catch (error) {}
+
+
+        /*
+         * Slightly enlarge selected gem.
+         */
+
+        const gem =
+            cell.querySelector(
+                ".gem"
+            );
+
+
+        if (gem) {
+
+            gem.style.transform =
+                "rotate(45deg) scale(1.08)";
+
+        }
+
+
+        event.preventDefault();
+
+    }
+);
+
+
+/* =========================================================
+   POINTER MOVE
+========================================================= */
+
+boardElement.addEventListener(
+    "pointermove",
+    event => {
+
+        if (
+            !swipe.active
+        ) {
+
+            return;
+
+        }
+
+
+        swipe.currentX =
+            event.clientX;
+
+
+        swipe.currentY =
+            event.clientY;
+
+
+        const dx =
+            swipe.currentX -
+            swipe.startX;
+
+
+        const dy =
+            swipe.currentY -
+            swipe.startY;
+
+
+        const distance =
+            Math.hypot(
+                dx,
+                dy
+            );
+
+
+        /*
+         * Don't start dragging
+         * for tiny movements.
+         */
+
+        if (
+            distance < 8
+        ) {
+
+            return;
+
+        }
+
+
+        swipe.hasMoved =
+            true;
+
+
+        updateDraggingGem();
+
+
+        event.preventDefault();
+
+    }
+);
+
+
+/* =========================================================
+   POINTER UP
+========================================================= */
+
+boardElement.addEventListener(
+    "pointerup",
+    async event => {
+
+        if (
+            !swipe.active
+        ) {
+
+            return;
+
+        }
+
+
+        const dx =
+            event.clientX -
+            swipe.startX;
+
+
+        const dy =
+            event.clientY -
+            swipe.startY;
+
+
+        const distance =
+            Math.hypot(
+                dx,
+                dy
+            );
+
+
+        const start =
+            swipe.index;
+
+
+        const wasSwipe =
+            distance >= 25;
+
+
+        /*
+         * Stop pointer tracking.
+         */
+
+        swipe.active =
+            false;
+
+
+        try {
+
+            boardElement.releasePointerCapture(
+                event.pointerId
+            );
+
+        }
+        catch (error) {}
+
+
+        /*
+         * Small movement = normal click.
+         */
+
+        if (
+            !wasSwipe
+        ) {
+
+            resetDraggingVisual(
+                start
+            );
+
+
+            swipe.hasMoved =
+                false;
+
+
+            handleTap(
+                start
+            );
+
+
+            return;
+
+        }
+
+
+        /*
+         * Prevent the click event
+         * generated by pointerup.
+         */
+
+        swipe.hasMoved =
+            true;
+
+
+        /*
+         * Determine exact direction.
+         */
+
+        const result =
+            getSwipeTarget(
+                start,
+                dx,
+                dy
+            );
+
+
+        const target =
+            result.target;
+
+
+        const direction =
+            result.direction;
+
+
+        /*
+         * Invalid edge swipe.
+         */
+
+        if (
+            target < 0
+        ) {
+
+            resetDraggingVisual(
+                start
+            );
+
+
+            swipe.hasMoved =
+                false;
+
+
+            return;
+
+        }
+
+
+        /*
+         * Animate the two gems
+         * toward each other.
+         */
+
+        await finishSwipe(
+            start,
+            target,
+            direction
+        );
+
+
+        /*
+         * The click following
+         * the swipe is ignored.
+         */
+
+        setTimeout(
+            () => {
+
+                swipe.hasMoved =
+                    false;
+
+            },
+            80
+        );
+
+    }
+);
+
+
+/* =========================================================
+   POINTER CANCEL
+========================================================= */
+
+boardElement.addEventListener(
+    "pointercancel",
+    () => {
+
+        if (
+            swipe.active
+        ) {
+
+            resetDraggingVisual(
+                swipe.index
+            );
+
+        }
+
+
+        swipe.active =
+            false;
+
+        swipe.hasMoved =
+            false;
+
+    }
+);
+
+
+/* =========================================================
+   CONTEXT MENU
+========================================================= */
+
+boardElement.addEventListener(
+    "contextmenu",
+    event => {
+
+        event.preventDefault();
+
+    }
+);
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+document
+    .getElementById("newGame")
+    .addEventListener(
+        "click",
+        newGame
+    );
+
+
+document
+    .getElementById("shuffle")
+    .addEventListener(
+        "click",
+        shuffleBoard
+    );
+
+
+document
+    .getElementById("hint")
+    .addEventListener(
+        "click",
+        showHint
+    );
+
+
+/* =========================================================
+   START
+========================================================= */
+
+newGame();
+
+
+})();
+</script>
+
+</body>
+</html>

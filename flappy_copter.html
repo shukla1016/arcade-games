@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no">
+
+<title>Flappy Copter</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap"
+      rel="stylesheet">
+
+<style>
+
+/* =========================================================
+   RESET
+========================================================= */
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+
+    overflow: hidden;
+
+    font-family:
+        "Fredoka",
+        sans-serif;
+
+    background:
+        linear-gradient(
+            180deg,
+            #70d8ff 0%,
+            #b7efff 58%,
+            #f7df9b 100%
+        );
+
+    user-select: none;
+}
+
+
+/* =========================================================
+   GAME
+========================================================= */
+
+.game {
+
+    position: relative;
+
+    width: 100vw;
+    height: 100vh;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   SKY
+========================================================= */
+
+.sky {
+
+    position: absolute;
+
+    inset: 0;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   SUN
+========================================================= */
+
+.sun {
+
+    position: absolute;
+
+    width: 110px;
+    height: 110px;
+
+    right: 10%;
+    top: 10%;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            #fff9b2 0%,
+            #ffe26a 50%,
+            #ffc928 100%
+        );
+
+    box-shadow:
+        0 0 45px rgba(255,226,80,.65);
+}
+
+
+/* =========================================================
+   CLOUDS
+========================================================= */
+
+.cloud {
+
+    position: absolute;
+
+    width: 150px;
+    height: 45px;
+
+    border-radius: 50px;
+
+    background:
+        rgba(255,255,255,.82);
+
+    filter:
+        drop-shadow(
+            0 5px 5px rgba(70,150,180,.12)
+        );
+}
+
+.cloud::before,
+.cloud::after {
+
+    content: "";
+
+    position: absolute;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255,255,255,.9);
+}
+
+.cloud::before {
+
+    width: 65px;
+    height: 65px;
+
+    left: 20px;
+    bottom: 10px;
+}
+
+.cloud::after {
+
+    width: 80px;
+    height: 80px;
+
+    right: 20px;
+    bottom: 5px;
+}
+
+.cloud1 {
+
+    top: 18%;
+    left: -180px;
+
+    transform: scale(.8);
+
+    animation:
+        cloudMove 24s linear infinite;
+}
+
+.cloud2 {
+
+    top: 37%;
+    left: -220px;
+
+    transform: scale(1.15);
+
+    animation:
+        cloudMove 31s linear infinite 5s;
+}
+
+.cloud3 {
+
+    top: 7%;
+    left: -260px;
+
+    transform: scale(.6);
+
+    animation:
+        cloudMove 38s linear infinite 10s;
+}
+
+@keyframes cloudMove {
+
+    from {
+        left: -250px;
+    }
+
+    to {
+        left: 110vw;
+    }
+
+}
+
+
+/* =========================================================
+   DISTANT HILLS
+========================================================= */
+
+.hills {
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    bottom: 0;
+
+    height: 28%;
+
+    background:
+        linear-gradient(
+            135deg,
+            transparent 25%,
+            #77bd79 25%,
+            #77bd79 42%,
+            transparent 42%
+        );
+
+    opacity: .7;
+}
+
+
+/* =========================================================
+   GROUND
+========================================================= */
+
+.ground {
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    bottom: 0;
+
+    height: 75px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #75c84c 0%,
+            #48a934 35%,
+            #8a572c 36%,
+            #69401f 100%
+        );
+
+    border-top:
+        5px solid #b9e75b;
+
+    z-index: 15;
+}
+
+
+/* =========================================================
+   GAME WORLD
+========================================================= */
+
+.world {
+
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 5;
+}
+
+
+/* =========================================================
+   PLAYER
+========================================================= */
+
+.copter {
+
+    position: absolute;
+
+    width: 62px;
+    height: 42px;
+
+    left: 20%;
+
+    z-index: 20;
+
+    will-change:
+        top,
+        transform;
+}
+
+
+/* body */
+
+.copter-body {
+
+    position: absolute;
+
+    width: 48px;
+    height: 31px;
+
+    left: 6px;
+    top: 8px;
+
+    border-radius:
+        18px 18px 14px 14px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #ffdc45,
+            #ff9c19
+        );
+
+    border:
+        3px solid #ffffff;
+
+    box-shadow:
+        0 5px 10px rgba(170,90,0,.25),
+        inset 0 -4px 0 rgba(180,90,0,.12);
+}
+
+
+/* windshield */
+
+.windshield {
+
+    position: absolute;
+
+    width: 22px;
+    height: 16px;
+
+    left: 25px;
+    top: 12px;
+
+    border-radius:
+        10px 10px 5px 5px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #c9f8ff,
+            #4eb5d6
+        );
+
+    border:
+        2px solid #ffffff;
+}
+
+
+/* tail */
+
+.tail {
+
+    position: absolute;
+
+    left: 0;
+    top: 19px;
+
+    width: 15px;
+    height: 8px;
+
+    background: #ffad1c;
+
+    border-radius:
+        7px 0 0 7px;
+
+    border-left:
+        3px solid #ffffff;
+}
+
+
+/* tail rotor */
+
+.tail-rotor {
+
+    position: absolute;
+
+    left: -5px;
+    top: 13px;
+
+    width: 18px;
+    height: 20px;
+}
+
+.tail-rotor::before,
+.tail-rotor::after {
+
+    content: "";
+
+    position: absolute;
+
+    left: 8px;
+    top: 1px;
+
+    width: 3px;
+    height: 18px;
+
+    border-radius: 5px;
+
+    background: #ffffff;
+}
+
+.tail-rotor::after {
+
+    transform:
+        rotate(90deg);
+}
+
+
+/* main rotor */
+
+.rotor {
+
+    position: absolute;
+
+    width: 58px;
+    height: 5px;
+
+    left: 3px;
+    top: 1px;
+
+    border-radius: 5px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 0 4px rgba(0,0,0,.2);
+
+    animation:
+        rotorSpin .09s linear infinite;
+}
+
+@keyframes rotorSpin {
+
+    to {
+        transform: rotate(180deg);
+    }
+
+}
+
+
+/* landing runner */
+
+.runner {
+
+    position: absolute;
+
+    left: 18px;
+    bottom: -5px;
+
+    width: 26px;
+    height: 5px;
+
+    border-bottom:
+        3px solid #a96213;
+
+    border-radius: 50%;
+}
+
+
+/* =========================================================
+   PIPES / OBSTACLES
+========================================================= */
+
+.pipe {
+
+    position: absolute;
+
+    width: 72px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #3c9c35,
+            #70c94c 45%,
+            #348a2e
+        );
+
+    border:
+        3px solid #256c24;
+
+    box-shadow:
+        4px 0 8px rgba(0,0,0,.15);
+
+    z-index: 10;
+}
+
+
+/* pipe cap */
+
+.pipe::after {
+
+    content: "";
+
+    position: absolute;
+
+    left: -8px;
+
+    width: 82px;
+
+    height: 28px;
+
+    border-radius: 7px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #348d2e,
+            #76d052 45%,
+            #2f8129
+        );
+
+    border:
+        3px solid #256c24;
+
+}
+
+
+/* top pipe */
+
+.pipe.top {
+
+    top: 0;
+
+    border-radius:
+        0 0 5px 5px;
+}
+
+.pipe.top::after {
+
+    bottom: -3px;
+}
+
+
+/* bottom pipe */
+
+.pipe.bottom {
+
+    bottom: 75px;
+
+    border-radius:
+        5px 5px 0 0;
+}
+
+.pipe.bottom::after {
+
+    top: -3px;
+}
+
+
+/* =========================================================
+   SCORE
+========================================================= */
+
+.hud {
+
+    position: absolute;
+
+    top: 18px;
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 50;
+
+    display: flex;
+
+    gap: 10px;
+}
+
+.score-box {
+
+    min-width: 125px;
+
+    padding: 10px 16px;
+
+    text-align: center;
+
+    border-radius: 15px;
+
+    background:
+        rgba(255,255,255,.75);
+
+    border:
+        2px solid rgba(255,255,255,.9);
+
+    box-shadow:
+        0 6px 20px rgba(45,120,160,.15);
+
+    backdrop-filter:
+        blur(5px);
+}
+
+.score-label {
+
+    display: block;
+
+    font-size: 11px;
+
+    color: #47819a;
+
+}
+
+.score-value {
+
+    display: block;
+
+    margin-top: 3px;
+
+    font-size: 23px;
+
+    color: #174d67;
+}
+
+
+/* =========================================================
+   START / GAME OVER
+========================================================= */
+
+.overlay {
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 100;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        rgba(20,100,135,.28);
+
+    backdrop-filter:
+        blur(4px);
+}
+
+.overlay.hidden {
+    display: none;
+}
+
+
+.card {
+
+    width:
+        min(430px,90vw);
+
+    padding: 32px 25px;
+
+    text-align: center;
+
+    border-radius: 25px;
+
+    background:
+        rgba(255,255,255,.93);
+
+    border:
+        4px solid #ffffff;
+
+    box-shadow:
+        0 15px 50px rgba(30,100,130,.28);
+}
+
+.card h1 {
+
+    margin: 0;
+
+    font-size:
+        clamp(25px,7vw,42px);
+
+    color: #e48c16;
+
+    text-shadow:
+        0 3px 0 #ffd66b;
+}
+
+.card p {
+
+    margin:
+        18px 0;
+
+    font-size: 15px;
+
+    line-height: 1.7;
+
+    color: #507589;
+}
+
+.card strong {
+    color: #e48c16;
+}
+
+
+/* =========================================================
+   BUTTON
+========================================================= */
+
+.start-btn {
+
+    border: 0;
+
+    padding:
+        14px 28px;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffca3c,
+            #ff9b1c
+        );
+
+    color: white;
+
+    font-family:
+        "Fredoka",
+        sans-serif;
+
+    font-size: 18px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 5px 0 #d4770b,
+        0 10px 20px rgba(210,120,0,.25);
+
+    transition:
+        transform .1s;
+}
+
+.start-btn:active {
+
+    transform:
+        translateY(4px);
+
+    box-shadow:
+        0 1px 0 #d4770b;
+}
+
+
+/* =========================================================
+   PAUSE
+========================================================= */
+
+.pause {
+
+    position: absolute;
+
+    top: 22px;
+    right: 20px;
+
+    z-index: 60;
+
+    border: 0;
+
+    border-radius: 10px;
+
+    padding: 9px 13px;
+
+    background:
+        rgba(255,255,255,.7);
+
+    color: #41748a;
+
+    font-family:
+        "Fredoka",
+        sans-serif;
+
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   INSTRUCTIONS
+========================================================= */
+
+.instructions {
+
+    position: absolute;
+
+    left: 50%;
+
+    bottom: 91px;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 30;
+
+    padding: 10px 16px;
+
+    border-radius: 30px;
+
+    background:
+        rgba(255,255,255,.72);
+
+    color: #518096;
+
+    font-size: 12px;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width:600px) {
+
+    .sun {
+
+        width: 75px;
+        height: 75px;
+
+        right: 8%;
+        top: 13%;
+    }
+
+    .hud {
+
+        top: 12px;
+    }
+
+    .score-box {
+
+        min-width: 90px;
+
+        padding: 8px 10px;
+    }
+
+    .score-label {
+        font-size: 9px;
+    }
+
+    .score-value {
+        font-size: 18px;
+    }
+
+    .pause {
+
+        top: 65px;
+        right: 12px;
+    }
+
+    .instructions {
+
+        bottom: 88px;
+
+        font-size: 10px;
+
+        padding: 8px 12px;
+    }
+
+    .copter {
+
+        left: 18%;
+
+        transform-origin:
+            center;
+    }
+
+    .pipe {
+        width: 60px;
+    }
+
+    .pipe::after {
+        width: 70px;
+    }
+
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div class="game">
+
+
+    <!-- =====================================================
+         SKY
+    ====================================================== -->
+
+    <div class="sky">
+
+        <div class="sun"></div>
+
+        <div class="cloud cloud1"></div>
+
+        <div class="cloud cloud2"></div>
+
+        <div class="cloud cloud3"></div>
+
+        <div class="hills"></div>
+
+        <div class="ground"></div>
+
+    </div>
+
+
+    <!-- =====================================================
+         HUD
+    ====================================================== -->
+
+    <div class="hud">
+
+        <div class="score-box">
+
+            <span class="score-label">
+                SCORE
+            </span>
+
+            <span
+                id="score"
+                class="score-value"
+            >
+                0
+            </span>
+
+        </div>
+
+
+        <div class="score-box">
+
+            <span class="score-label">
+                BEST
+            </span>
+
+            <span
+                id="best"
+                class="score-value"
+            >
+                0
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PAUSE
+    ====================================================== -->
+
+    <button
+        id="pause"
+        class="pause"
+    >
+        PAUSE
+    </button>
+
+
+    <!-- =====================================================
+         WORLD
+    ====================================================== -->
+
+    <div
+        id="world"
+        class="world"
+    >
+
+
+        <!-- PLAYER -->
+
+        <div
+            id="copter"
+            class="copter"
+        >
+
+            <div class="rotor"></div>
+
+            <div class="tail"></div>
+
+            <div class="tail-rotor"></div>
+
+            <div class="copter-body"></div>
+
+            <div class="windshield"></div>
+
+            <div class="runner"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         INSTRUCTIONS
+    ====================================================== -->
+
+    <div class="instructions">
+        TAP / CLICK / SPACE = FLY UP
+    </div>
+
+
+    <!-- =====================================================
+         OVERLAY
+    ====================================================== -->
+
+    <div
+        id="overlay"
+        class="overlay"
+    >
+
+        <div class="card">
+
+            <h1 id="title">
+                FLAPPY COPTER
+            </h1>
+
+            <p id="message">
+
+                Keep the helicopter in the air
+                and fly through the gaps.
+
+                <br><br>
+
+                Don't touch the pipes
+                or the ground!
+
+            </p>
+
+            <button
+                id="start"
+                class="start-btn"
+            >
+                START FLYING
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const world =
+    document.getElementById("world");
+
+const copter =
+    document.getElementById("copter");
+
+const scoreElement =
+    document.getElementById("score");
+
+const bestElement =
+    document.getElementById("best");
+
+const overlay =
+    document.getElementById("overlay");
+
+const titleElement =
+    document.getElementById("title");
+
+const messageElement =
+    document.getElementById("message");
+
+const startButton =
+    document.getElementById("start");
+
+const pauseButton =
+    document.getElementById("pause");
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let running = false;
+
+let paused = false;
+
+let score = 0;
+
+let best =
+    Number(
+        localStorage.getItem(
+            "flappy-copter-best"
+        ) || 0
+    );
+
+
+/* =========================================================
+   PHYSICS
+========================================================= */
+
+let copterY = 0;
+
+let velocity = 0;
+
+
+/*
+    Gravity.
+*/
+
+const GRAVITY = 0.42;
+
+
+/*
+    Upward velocity when
+    the player taps.
+*/
+
+const FLAP_POWER = -7.2;
+
+
+/*
+    Maximum downward velocity.
+*/
+
+const MAX_FALL = 10;
+
+
+/* =========================================================
+   GAME SPEED
+========================================================= */
+
+let gameSpeed = 4.2;
+
+
+/*
+    Speed gradually increases
+    with score.
+*/
+
+function getSpeed() {
+
+    return Math.min(
+        8.5,
+        4.2 +
+        score * 0.018
+    );
+
+}
+
+
+/* =========================================================
+   PIPE SETTINGS
+========================================================= */
+
+let pipeTimer = 0;
+
+let pipes = [];
+
+
+/*
+    Pipe spacing becomes slightly
+    tighter at higher scores.
+*/
+
+function getPipeGap() {
+
+    return Math.max(
+        125,
+        190 -
+        score * 0.08
+    );
+
+}
+
+
+/* =========================================================
+   PLAYER X
+========================================================= */
+
+function getPlayerX() {
+
+    return world.clientWidth * 0.20;
+
+}
+
+
+/* =========================================================
+   RESET PLAYER
+========================================================= */
+
+function resetPlayer() {
+
+    copterY =
+        world.clientHeight * 0.42;
+
+    velocity = 0;
+
+    copter.style.left =
+        "20%";
+
+    copter.style.top =
+        copterY + "px";
+
+    copter.style.transform =
+        "rotate(0deg)";
+
+}
+
+
+/* =========================================================
+   FLAP
+========================================================= */
+
+function flap() {
+
+    if(!running || paused)
+        return;
+
+
+    velocity =
+        FLAP_POWER;
+
+}
+
+
+/* =========================================================
+   UPDATE PLAYER
+========================================================= */
+
+function updatePlayer(dt) {
+
+    velocity +=
+        GRAVITY * dt;
+
+
+    velocity =
+        Math.min(
+            MAX_FALL,
+            velocity
+        );
+
+
+    copterY +=
+        velocity * dt;
+
+
+    /*
+        Tilt helicopter according
+        to vertical velocity.
+    */
+
+    const angle =
+        Math.max(
+            -25,
+            Math.min(
+                55,
+                velocity * 4
+            )
+        );
+
+
+    copter.style.top =
+        copterY + "px";
+
+
+    copter.style.transform =
+        `rotate(${angle}deg)`;
+
+
+    /*
+        Ground collision.
+    */
+
+    const groundTop =
+        world.clientHeight -
+        75;
+
+
+    if(
+        copterY +
+        copter.offsetHeight >=
+        groundTop
+    ) {
+
+        gameOver();
+
+        return;
+
+    }
+
+
+    /*
+        Ceiling collision.
+    */
+
+    if(copterY <= 0) {
+
+        copterY = 0;
+
+        gameOver();
+
+    }
+
+}
+
+
+/* =========================================================
+   CREATE PIPE
+========================================================= */
+
+function createPipe() {
+
+    const worldHeight =
+        world.clientHeight;
+
+
+    /*
+        Gap becomes smaller
+        as difficulty increases.
+    */
+
+    const gap =
+        getPipeGap();
+
+
+    /*
+        Keep enough room above
+        and below the gap.
+    */
+
+    const margin = 75;
+
+
+    const minGapY =
+        margin;
+
+
+    const maxGapY =
+        worldHeight -
+        75 -
+        margin -
+        gap;
+
+
+    const gapY =
+        minGapY +
+        Math.random() *
+        Math.max(
+            20,
+            maxGapY - minGapY
+        );
+
+
+    /*
+        Top pipe.
+    */
+
+    const topPipe =
+        document.createElement("div");
+
+    topPipe.className =
+        "pipe top";
+
+
+    const topHeight =
+        gapY;
+
+
+    topPipe.style.height =
+        topHeight + "px";
+
+
+    /*
+        Bottom pipe.
+    */
+
+    const bottomPipe =
+        document.createElement("div");
+
+    bottomPipe.className =
+        "pipe bottom";
+
+
+    const bottomHeight =
+        worldHeight -
+        75 -
+        gapY -
+        gap;
+
+
+    bottomPipe.style.height =
+        bottomHeight + "px";
+
+
+    const x =
+        world.clientWidth + 20;
+
+
+    topPipe.style.left =
+        x + "px";
+
+    bottomPipe.style.left =
+        x + "px";
+
+
+    world.appendChild(
+        topPipe
+    );
+
+    world.appendChild(
+        bottomPipe
+    );
+
+
+    pipes.push({
+
+        x: x,
+
+        width:
+            topPipe.offsetWidth,
+
+        topHeight:
+            topHeight,
+
+        bottomHeight:
+            bottomHeight,
+
+        scored: false,
+
+        topElement:
+            topPipe,
+
+        bottomElement:
+            bottomPipe
+
+    });
+
+}
+
+
+/* =========================================================
+   PLAYER RECT
+========================================================= */
+
+function getPlayerRect() {
+
+    return {
+
+        x:
+            getPlayerX(),
+
+        y:
+            copterY,
+
+        width:
+            copter.offsetWidth,
+
+        height:
+            copter.offsetHeight
+
+    };
+
+}
+
+
+/* =========================================================
+   PIPE COLLISION
+========================================================= */
+
+function pipeCollision(
+    player,
+    pipe
+) {
+
+    const playerRight =
+        player.x +
+        player.width;
+
+
+    const pipeRight =
+        pipe.x +
+        pipe.width;
+
+
+    /*
+        No horizontal overlap.
+    */
+
+    if(
+        playerRight <= pipe.x ||
+        player.x >= pipeRight
+    ) {
+
+        return false;
+
+    }
+
+
+    /*
+        Top pipe collision.
+    */
+
+    if(
+        player.y <
+        pipe.topHeight
+    ) {
+
+        return true;
+
+    }
+
+
+    /*
+        Bottom pipe starts here.
+    */
+
+    const bottomStart =
+        world.clientHeight -
+        75 -
+        pipe.bottomHeight;
+
+
+    if(
+        player.y +
+        player.height >
+        bottomStart
+    ) {
+
+        return true;
+
+    }
+
+
+    return false;
+
+}
+
+
+/* =========================================================
+   UPDATE PIPES
+========================================================= */
+
+function updatePipes(dt) {
+
+    const speed =
+        getSpeed();
+
+
+    const movement =
+        speed * dt;
+
+
+    const player =
+        getPlayerRect();
+
+
+    for(
+        let i = pipes.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const pipe =
+            pipes[i];
+
+
+        pipe.x -=
+            movement;
+
+
+        pipe.topElement.style.left =
+            pipe.x + "px";
+
+
+        pipe.bottomElement.style.left =
+            pipe.x + "px";
+
+
+        /*
+            COLLISION
+        */
+
+        if(
+            pipeCollision(
+                player,
+                pipe
+            )
+        ) {
+
+            gameOver();
+
+            return;
+
+        }
+
+
+        /*
+            SCORE
+
+            Score when the helicopter
+            completely passes a pipe.
+        */
+
+        if(
+            !pipe.scored &&
+            pipe.x +
+            pipe.width <
+            player.x
+        ) {
+
+            pipe.scored = true;
+
+            score++;
+
+            scoreElement.textContent =
+                score;
+
+        }
+
+
+        /*
+            Remove old pipe.
+        */
+
+        if(
+            pipe.x +
+            pipe.width <
+            -100
+        ) {
+
+            pipe.topElement.remove();
+
+            pipe.bottomElement.remove();
+
+            pipes.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   SPAWN PIPES
+========================================================= */
+
+function spawnPipes(dt) {
+
+    pipeTimer +=
+        dt * 16.67;
+
+
+    /*
+        Pipes get closer together
+        as score increases.
+    */
+
+    const interval =
+        Math.max(
+            900,
+            1450 -
+            score * 5
+        );
+
+
+    if(
+        pipeTimer >=
+        interval
+    ) {
+
+        createPipe();
+
+        pipeTimer = 0;
+
+    }
+
+}
+
+
+/* =========================================================
+   GAME LOOP
+========================================================= */
+
+let lastTime = 0;
+
+
+function gameLoop(timestamp) {
+
+    requestAnimationFrame(
+        gameLoop
+    );
+
+
+    if(!running || paused)
+        return;
+
+
+    if(!lastTime) {
+
+        lastTime =
+            timestamp;
+
+    }
+
+
+    let dt =
+        (
+            timestamp -
+            lastTime
+        ) / 16.67;
+
+
+    lastTime =
+        timestamp;
+
+
+    /*
+        Prevent huge physics jumps.
+    */
+
+    dt =
+        Math.min(
+            dt,
+            2
+        );
+
+
+    updatePlayer(dt);
+
+
+    if(!running)
+        return;
+
+
+    spawnPipes(dt);
+
+
+    updatePipes(dt);
+
+
+    /*
+        Update best score.
+    */
+
+    if(score > best) {
+
+        best =
+            score;
+
+        bestElement.textContent =
+            best;
+
+        localStorage.setItem(
+            "flappy-copter-best",
+            best
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CLEAR PIPES
+========================================================= */
+
+function clearPipes() {
+
+    pipes.forEach(
+        pipe => {
+
+            pipe.topElement.remove();
+
+            pipe.bottomElement.remove();
+
+        }
+    );
+
+    pipes = [];
+
+}
+
+
+/* =========================================================
+   START GAME
+========================================================= */
+
+function startGame() {
+
+    clearPipes();
+
+
+    running = true;
+
+    paused = false;
+
+
+    score = 0;
+
+    pipeTimer = 0;
+
+    lastTime = 0;
+
+
+    scoreElement.textContent =
+        "0";
+
+
+    resetPlayer();
+
+
+    overlay.classList.add(
+        "hidden"
+    );
+
+
+    pauseButton.textContent =
+        "PAUSE";
+
+}
+
+
+/* =========================================================
+   GAME OVER
+========================================================= */
+
+function gameOver() {
+
+    if(!running)
+        return;
+
+
+    running = false;
+
+    paused = false;
+
+
+    if(score > best) {
+
+        best =
+            score;
+
+        localStorage.setItem(
+            "flappy-copter-best",
+            best
+        );
+
+    }
+
+
+    bestElement.textContent =
+        best;
+
+
+    titleElement.textContent =
+        "GAME OVER";
+
+
+    messageElement.innerHTML =
+
+        `You flew through
+        <strong>${score}</strong>
+        gates!
+
+        <br><br>
+
+        Best score:
+        <strong>${best}</strong>`;
+
+
+    startButton.textContent =
+        "FLY AGAIN";
+
+
+    overlay.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+/* =========================================================
+   PAUSE
+========================================================= */
+
+function togglePause() {
+
+    if(!running)
+        return;
+
+
+    paused =
+        !paused;
+
+
+    if(paused) {
+
+        pauseButton.textContent =
+            "RESUME";
+
+    }
+
+    else {
+
+        pauseButton.textContent =
+            "PAUSE";
+
+        lastTime = 0;
+
+    }
+
+}
+
+
+/* =========================================================
+   KEYBOARD
+========================================================= */
+
+document.addEventListener(
+    "keydown",
+    function(e) {
+
+        if(
+            e.code === "Space" ||
+            e.code === "ArrowUp" ||
+            e.code === "KeyW"
+        ) {
+
+            e.preventDefault();
+
+            flap();
+
+        }
+
+
+        if(
+            e.code === "KeyP" ||
+            e.code === "Escape"
+        ) {
+
+            e.preventDefault();
+
+            togglePause();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   MOUSE / TOUCH
+========================================================= */
+
+world.addEventListener(
+    "pointerdown",
+    function() {
+
+        flap();
+
+    }
+);
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+startButton.addEventListener(
+    "click",
+    function(e) {
+
+        e.stopPropagation();
+
+        startGame();
+
+    }
+);
+
+
+pauseButton.addEventListener(
+    "click",
+    function(e) {
+
+        e.stopPropagation();
+
+        togglePause();
+
+    }
+);
+
+
+/* =========================================================
+   RESIZE
+========================================================= */
+
+window.addEventListener(
+    "resize",
+    function() {
+
+        if(!running) {
+
+            resetPlayer();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+bestElement.textContent =
+    best;
+
+
+resetPlayer();
+
+
+requestAnimationFrame(
+    gameLoop
+);
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Cricket - Dynamic Difficulty</title>
+    <style>
+        :root {
+            --grass-bg: #4caf50;
+            --grass-stripe: #43a047;
+            --text-main: #333;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1c20;
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            user-select: none;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-around;
+            width: 800px;
+            background: #fff;
+            padding: 15px 30px;
+            border-radius: 15px 15px 0 0;
+            box-sizing: border-box;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            border-bottom: 4px solid #1976d2; 
+        }
+
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 1rem; color: #7f8c8d; font-weight: bold; text-transform: uppercase; }
+        .stat-value { font-size: 2.5rem; font-weight: 900; color: #2c3e50; }
+        #high-score-display { color: #e67e22; }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            border-radius: 0 0 15px 15px;
+            overflow: hidden;
+            background-color: var(--grass-bg);
+        }
+
+        canvas {
+            display: block;
+            background: repeating-linear-gradient(
+                0deg,
+                var(--grass-bg),
+                var(--grass-bg) 50px,
+                var(--grass-stripe) 50px,
+                var(--grass-stripe) 100px
+            );
+            cursor: pointer;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        #overlay h1 { font-size: 4rem; margin: 0 0 10px 0; color: #1976d2; }
+        #overlay p { font-size: 1.3rem; margin-bottom: 25px; color: #555; font-weight: bold; }
+
+        button {
+            padding: 15px 40px;
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: 900;
+            box-shadow: 0 6px 0 #1565c0;
+            transition: all 0.1s;
+        }
+        button:active { transform: translateY(6px); box-shadow: 0 0 0 #1565c0; }
+        #instructions { margin-top: 20px; color: #ccc; font-size: 1.1rem; }
+        .controls-hint { color: #64b5f6; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="stat-box">
+            <div class="stat-label">Score</div>
+            <div class="stat-value" id="score-display">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">High Score</div>
+            <div class="stat-value" id="high-score-display">0</div>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="550"></canvas>
+        <div id="overlay">
+            <h1 id="overlay-title">Pro Cricket</h1>
+            <p id="overlay-desc">Speed increases as you score!</p>
+            <button onclick="startGame()">PLAY</button>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        Click or press <span class="controls-hint">SPACEBAR</span>. Timing determines 1, 2, 3, 4, or 6 runs!
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const scoreDisplay = document.getElementById('score-display');
+    const highScoreDisplay = document.getElementById('high-score-display');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayDesc = document.getElementById('overlay-desc');
+
+    // Game State
+    let score = 0;
+    let highScore = localStorage.getItem('doodle_cricket_hs') || 0;
+    let gameState = 'START'; 
+    highScoreDisplay.innerText = highScore;
+
+    // Field Coordinates
+    const STRIKE_Y = 400; 
+    const BOWLER_Y = 100;
+    
+    let ball = { x: 400, y: BOWLER_Y, z: 0, vx: 0, vy: 0, vz: 0, radius: 5, active: false, isHit: false, runPotential: 0 };
+    let bat = { angle: Math.PI * 0.15, isSwinging: false, hasSwung: false, progress: 0 };
+
+    // Dynamic Stumps Array
+    let stumps = [];
+
+    let fielders = [];
+    const baseFielderPositions = [
+        {x: 180, y: 150}, {x: 620, y: 150}, 
+        {x: 120, y: 280}, {x: 680, y: 280}, 
+        {x: 300, y: 220}, {x: 500, y: 220}
+    ];
+    
+    // Animation Effects
+    let popups = [];
+    let particles = [];
+    let ballTrail = [];
+    let screenShake = 0;
+
+    function initStumps() {
+        stumps = [
+            {x: 388, y: STRIKE_Y + 20, vx: 0, vy: 0, va: 0, angle: 0, isHit: false},
+            {x: 397, y: STRIKE_Y + 20, vx: 0, vy: 0, va: 0, angle: 0, isHit: false},
+            {x: 406, y: STRIKE_Y + 20, vx: 0, vy: 0, va: 0, angle: 0, isHit: false}
+        ];
+    }
+
+    function initFielders() {
+        fielders = baseFielderPositions.map(pos => ({
+            x: pos.x, y: pos.y, 
+            originX: pos.x, originY: pos.y,
+            speed: 2.2 + Math.random() * 1.5,
+            radius: 12
+        }));
+    }
+
+    function startGame() {
+        score = 0;
+        popups = [];
+        particles = [];
+        updateScoreboard();
+        overlay.style.display = 'none';
+        initFielders();
+        nextBall();
+    }
+
+    function nextBall() {
+        gameState = 'READY';
+        bat.isSwinging = false;
+        bat.hasSwung = false;
+        bat.angle = Math.PI * 0.15; 
+        ballTrail = [];
+        
+        initStumps(); // Reset stumps to normal positions
+        fielders.forEach(f => { f.x = f.originX; f.y = f.originY; });
+        setTimeout(bowlBall, 1000);
+    }
+
+    function bowlBall() {
+        if (gameState !== 'READY') return;
+        gameState = 'BOWLING';
+        
+        // Difficulty scales up with score (max 2.2x speed)
+        let difficultyMult = Math.min(1 + (score / 35), 2.2);
+        
+        const speeds = [5, 6.5, 8].map(s => s * difficultyMult);
+        const types = [-1.5, 0, 1.5]; 
+        
+        let speedY = speeds[Math.floor(Math.random() * speeds.length)];
+        let speedX = types[Math.floor(Math.random() * types.length)];
+        let bounceDistY = STRIKE_Y - 80 - (Math.random() * 80); 
+
+        ball = {
+            x: 400, y: BOWLER_Y, z: 20, 
+            vy: speedY, vx: speedX, vz: -2, 
+            radius: 5.5, active: true, isHit: false, runPotential: 0,
+            bounceY: bounceDistY, hasBounced: false
+        };
+    }
+
+    function swingBat() {
+        if (gameState === 'BOWLING' && !bat.hasSwung) {
+            bat.isSwinging = true;
+            bat.hasSwung = true;
+            bat.progress = 0;
+        }
+    }
+
+    function createParticles(x, y, count, colorArr) {
+        for(let i = 0; i < count; i++) {
+            let color = colorArr[Math.floor(Math.random() * colorArr.length)];
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 12,
+                life: 1.0, color: color
+            });
+        }
+    }
+
+    function evaluateHit() {
+        let dist = Math.abs(ball.y - STRIKE_Y);
+        let runs = 0; 
+        
+        if (dist < 6) runs = 6;
+        else if (dist < 18) runs = 4;
+        else if (dist < 32) runs = 3;
+        else if (dist < 50) runs = 2;
+        else if (dist < 75) runs = 1;
+
+        if (runs > 0) {
+            ball.isHit = true;
+            ball.runPotential = runs;
+            gameState = 'BALL_HIT';
+
+            let timingOffset = ball.y - STRIKE_Y; 
+            ball.vx = (timingOffset / 3) + ((Math.random() - 0.5) * 3);
+            
+            if (runs >= 4) ball.vy = - (11 + runs); 
+            else ball.vy = - (5 + runs * 2.5);
+            ball.vz = runs > 2 ? runs * 1.5 : 2; 
+
+            createParticles(ball.x, ball.y, runs >= 4 ? 20 : 10, ['#fff', '#f1c40f']); 
+            createPopup("THWACK!", 400, STRIKE_Y - 40, "#fff", 30);
+            
+            if (runs === 6) screenShake = 20; 
+            if (runs === 4) screenShake = 10; 
+        }
+    }
+
+    function finishBall(resultStr, runValue, color, isOut) {
+        if (gameState === 'RESULT') return;
+        gameState = 'RESULT';
+        ball.active = false;
+        
+        createPopup(resultStr, 400, 250, color, 60);
+
+        if (isOut) {
+            setTimeout(endGame, 1500);
+        } else {
+            score += runValue;
+            updateScoreboard();
+            setTimeout(nextBall, 1500);
+        }
+    }
+
+    function endGame() {
+        gameState = 'GAMEOVER';
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('doodle_cricket_hs', highScore);
+        }
+        updateScoreboard();
+        
+        overlayTitle.innerText = "OUT!";
+        overlayDesc.innerText = `You scored ${score} runs.`;
+        overlay.style.display = 'flex';
+    }
+
+    function updateScoreboard() {
+        scoreDisplay.innerText = score;
+        highScoreDisplay.innerText = highScore;
+    }
+
+    function createPopup(text, x, y, color, size) {
+        popups.push({ text, x, y, color, size, life: 1.0, scale: 0.2 });
+    }
+
+    canvas.addEventListener('mousedown', swingBat);
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') { e.preventDefault(); swingBat(); }
+    });
+
+    // --- RENDERING & PHYSICS ---
+
+    function drawField() {
+        // Safe hardcoded Brown Dirt Pitch
+        ctx.fillStyle = '#8B5A2B';
+        ctx.beginPath();
+        ctx.moveTo(300, BOWLER_Y); ctx.lineTo(500, BOWLER_Y);
+        ctx.lineTo(550, 550); ctx.lineTo(250, 550);
+        ctx.fill();
+
+        // Lighter pitch crease area
+        ctx.fillStyle = '#A06C3E';
+        ctx.fillRect(270, STRIKE_Y - 5, 260, 50);
+
+        // White Crease lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(310, BOWLER_Y + 20); ctx.lineTo(490, BOWLER_Y + 20); 
+        ctx.moveTo(270, STRIKE_Y); ctx.lineTo(530, STRIKE_Y); 
+        ctx.stroke();
+
+        // Bowler Stumps (Static)
+        ctx.fillStyle = '#f39c12';
+        for(let i=0; i<3; i++) ctx.fillRect(395 + (i*5), BOWLER_Y - 20, 3, 20);
+    }
+
+    function updateAndDrawStumps() {
+        stumps.forEach(s => {
+            if (s.isHit) {
+                s.x += s.vx;
+                s.y += s.vy;
+                s.angle += s.va;
+            }
+            
+            ctx.save();
+            // Translate to center of stump for proper rotation
+            ctx.translate(s.x + 3, s.y + 20); 
+            ctx.rotate(s.angle);
+            
+            ctx.fillStyle = '#f39c12'; // Wood color
+            ctx.fillRect(-3, -20, 6, 40);
+            
+            // Highlight
+            ctx.fillStyle = '#f1c40f';
+            ctx.fillRect(-1, -20, 2, 40);
+            
+            ctx.restore();
+        });
+    }
+
+    function updateAndDrawFielders() {
+        fielders.forEach(f => {
+            if (gameState === 'BALL_HIT' && ball.y < STRIKE_Y) {
+                let dx = ball.x - f.x;
+                let dy = (ball.y - ball.z) - f.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
+                // Chase the ball
+                if (dist > 5) {
+                    f.x += (dx / dist) * f.speed;
+                    f.y += (dy / dist) * f.speed;
+                }
+
+                // Intercept Logic
+                if (dist < f.radius + 15) {
+                    if (ball.z > 12) {
+                        finishBall("CAUGHT OUT!", 0, "#e74c3c", true);
+                    } else {
+                        // Ground intercept. Award intended runs, maxed at 3.
+                        let granted = ball.runPotential;
+                        if (granted > 3) granted = 3; 
+                        finishBall(`${granted} RUNS`, granted, "#2ecc71", false);
+                    }
+                }
+            }
+
+            // Draw Orange Fielders
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath(); ctx.ellipse(f.x, f.y + 5, f.radius, f.radius/2, 0, 0, Math.PI*2); ctx.fill(); 
+            
+            ctx.fillStyle = '#f39c12'; // Orange team
+            ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, Math.PI, 0); ctx.fill();
+            ctx.fillStyle = '#ecf0f1'; // Eyes
+            ctx.beginPath(); ctx.arc(f.x - 4, f.y - 4, 3, 0, Math.PI*2); ctx.arc(f.x + 4, f.y - 4, 3, 0, Math.PI*2); ctx.fill();
+        });
+    }
+
+    function updateAndDrawBall() {
+        if (!ball.active) return;
+
+        ball.x += ball.vx; ball.y += ball.vy; ball.z += ball.vz;
+        ball.vz -= 0.15; // Gravity
+
+        let renderY = ball.y - ball.z; 
+
+        if (!ball.isHit) {
+            if (ball.y >= ball.bounceY && !ball.hasBounced) {
+                ball.z = 0; ball.vz = 3.5; ball.hasBounced = true; ball.vy *= 0.85;
+            }
+            if (ball.z < 0) { ball.z = 0; ball.vz = 0; }
+
+            // Collision check with stumps (Missed ball)
+            if (ball.y > STRIKE_Y + 30 && gameState === 'BOWLING') {
+                if (Math.abs(ball.x - 400) < 20) {
+                    // BOWLED! Animate stumps flying
+                    screenShake = 15;
+                    createParticles(ball.x, STRIKE_Y + 20, 20, ['#e67e22', '#d35400', '#f39c12']); // Wooden splinters
+                    
+                    stumps.forEach(s => {
+                        s.isHit = true;
+                        s.vx = (Math.random() - 0.5) * 12; // Fly left/right
+                        s.vy = (Math.random() * 8) + 4;    // Fly backwards (down screen)
+                        s.va = (Math.random() - 0.5) * 0.8; // Spin rapidly
+                    });
+
+                    finishBall("BOWLED!", 0, "#e74c3c", true);
+                } else if (ball.y > STRIKE_Y + 45) {
+                    // Past the wicket completely
+                    finishBall("DOT BALL", 0, "#95a5a6", false);
+                }
+            }
+        } else {
+            // Friction and Bouncing for Hit Balls
+            if (ball.z <= 0) {
+                ball.z = 0; 
+                ball.vz = Math.abs(ball.vz) * 0.4; 
+                if (ball.vz < 0.5) ball.vz = 0;
+                
+                // Ground friction
+                ball.vy *= 0.96; 
+                ball.vx *= 0.96;
+            }
+
+            // Ball naturally stops (Award Runs)
+            if (Math.abs(ball.vy) < 0.5 && Math.abs(ball.vx) < 0.5 && ball.y > 0) {
+                finishBall(`${ball.runPotential} RUNS`, ball.runPotential, "#2ecc71", false);
+            }
+
+            // Boundary Check
+            if (ball.x < 0 || ball.x > 800 || ball.y < 0) {
+                if (ball.z > 0 && ball.vz > 0 && ball.runPotential === 6) finishBall("SIX!", 6, "#f1c40f", false);
+                else finishBall("FOUR!", 4, "#3498db", false);
+            }
+
+            // Trails
+            if (Math.abs(ball.vy) > 3) {
+                ballTrail.push({x: ball.x, y: renderY});
+                if (ballTrail.length > 8) ballTrail.shift();
+                if (ballTrail.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(ballTrail[0].x, ballTrail[0].y);
+                    for(let i=1; i<ballTrail.length; i++) ctx.lineTo(ballTrail[i].x, ballTrail[i].y);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.lineWidth = 4; ctx.stroke();
+                }
+            }
+        }
+
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath(); ctx.ellipse(ball.x, ball.y, 7, 3, 0, 0, Math.PI*2); ctx.fill();
+
+        let renderRadius = ball.radius + (ball.y / 100); 
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath(); ctx.arc(ball.x, renderY, renderRadius, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(ball.x, renderY, renderRadius, 0, Math.PI, false); ctx.stroke();
+    }
+
+    function updateAndDrawBat() {
+        let batterX = 350; let batterY = STRIKE_Y + 15; 
+
+        if (bat.isSwinging) {
+            bat.progress += 0.12; 
+            let startAngle = Math.PI * 0.15;
+            let endAngle = -Math.PI * 0.85;
+            bat.angle = startAngle + (endAngle - startAngle) * Math.sin(bat.progress * (Math.PI/2));
+
+            if (!ball.isHit && bat.progress > 0.4 && bat.progress < 0.6 && gameState === 'BOWLING') {
+                if (ball.y > STRIKE_Y - 40 && ball.y < STRIKE_Y + 40) evaluateHit();
+            }
+            if (bat.progress >= 1) bat.isSwinging = false;
+        }
+
+        // Draw Batsman
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(batterX, batterY + 25, 20, 5, 0, 0, Math.PI*2); ctx.fill();
+
+        ctx.fillStyle = '#f1c40f'; // Helmet
+        ctx.beginPath(); ctx.arc(batterX - 8, batterY - 25, 14, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#1976d2'; // Blue Jersey
+        ctx.beginPath(); ctx.ellipse(batterX - 8, batterY + 2, 18, 22, 0, 0, Math.PI*2); ctx.fill();
+
+        // Draw Bat
+        ctx.save();
+        ctx.translate(batterX, batterY - 5);
+        ctx.rotate(bat.angle);
+        ctx.fillStyle = '#ecf0f1'; ctx.fillRect(-5, -8, 10, 30); 
+        ctx.fillStyle = '#d35400'; ctx.fillRect(-8, 22, 16, 60); 
+        ctx.restore();
+    }
+
+    function updateAndDrawParticles() {
+        for(let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+            if(p.life <= 0) { particles.splice(i, 1); continue; }
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+    }
+
+    function drawPopups() {
+        for (let i = popups.length - 1; i >= 0; i--) {
+            let p = popups[i];
+            ctx.save();
+            ctx.globalAlpha = p.life;
+            p.scale += (1 - p.scale) * 0.25; 
+            
+            ctx.translate(p.x, p.y);
+            ctx.scale(p.scale, p.scale);
+            
+            ctx.fillStyle = p.color;
+            ctx.font = `900 ${p.size}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 6;
+            ctx.strokeText(p.text, 0, 0);
+            ctx.fillText(p.text, 0, 0);
+            ctx.restore();
+
+            p.y -= 1.5; 
+            p.life -= 0.015;
+            if (p.life <= 0) popups.splice(i, 1);
+        }
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.save();
+        if (screenShake > 0) {
+            let dx = (Math.random() - 0.5) * screenShake;
+            let dy = (Math.random() - 0.5) * screenShake;
+            ctx.translate(dx, dy);
+            screenShake *= 0.8;
+            if (screenShake < 0.5) screenShake = 0;
+        }
+
+        drawField();
+        updateAndDrawStumps(); // Wickets rendered dynamically now
+        updateAndDrawFielders();
+        updateAndDrawBall(); 
+        updateAndDrawBat(); 
+        updateAndDrawParticles();
+        drawPopups();
+        
+        ctx.restore();
+
+        if (gameState === 'READY') {
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 24px Arial'; ctx.textAlign = 'center';
+            ctx.fillText("Bowler approaching...", 400, 250);
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    initStumps();
+    updateScoreboard();
+    initFielders();
+    gameLoop();
+</script>
+</body>
+</html>

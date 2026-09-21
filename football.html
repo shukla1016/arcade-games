@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Penalty Kick</title>
+<style>
+    *{ box-sizing:border-box; }
+    body {
+        margin: 0; padding: 0;
+        background: radial-gradient(circle at 50% 0%, #2c3e50 0%, #0f1115 75%);
+        color: #fff;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        min-height: 100vh;
+        user-select: none; overflow: hidden;
+    }
+    .header {
+        display: flex; justify-content: space-between;
+        width: 800px; background: #2c3e50;
+        padding: 15px 30px;
+        border-radius: 15px 15px 0 0;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+        border-bottom: 4px solid #e74c3c;
+    }
+    .stat-box { text-align: center; }
+    .stat-label { font-size: .9rem; color: #bdc3c7; font-weight: bold; text-transform: uppercase; }
+    .stat-value { font-size: 2.2rem; font-weight: 900; }
+    #lives-display { color: #e74c3c; letter-spacing: 5px; }
+    #streak-display { color: #f1c40f; }
+    #game-container {
+        position: relative;
+        box-shadow: 0 10px 40px rgba(0,0,0,.8);
+        border-radius: 0 0 15px 15px;
+        overflow: hidden; line-height: 0;
+    }
+    canvas { display: block; cursor: crosshair; }
+    #overlay {
+        position: absolute; inset: 0;
+        background: rgba(20,28,38,.92);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        z-index: 10; line-height: 1.2;
+    }
+    #overlay h1 { font-size: 4rem; margin: 0 0 10px; text-shadow: 0 4px 10px rgba(0,0,0,.5); }
+    #overlay p  { font-size: 1.3rem; margin-bottom: 25px; color: #bdc3c7; font-weight: bold; }
+    button {
+        padding: 15px 40px; background: #e74c3c; color: #fff;
+        border: none; border-radius: 30px; cursor: pointer;
+        font-size: 20px; font-weight: 900; font-family: inherit;
+        box-shadow: 0 6px 0 #c0392b; transition: all .1s;
+    }
+    button:active { transform: translateY(6px); box-shadow: 0 0 0 #c0392b; }
+    #instructions { margin-top: 15px; color: #95a5a6; font-size: 1rem; }
+    .hint { color: #f1c40f; font-weight: bold; }
+</style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="stat-box">
+            <div class="stat-label">Goal Streak</div>
+            <div class="stat-value" id="streak-display">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">High Score</div>
+            <div class="stat-value" id="high-score-display">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Strikes Left</div>
+            <div class="stat-value" id="lives-display">⚽⚽⚽</div>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="550"></canvas>
+        <div id="overlay">
+            <h1 id="overlay-title">Penalty Shootout</h1>
+            <p id="overlay-desc">Drag backwards from the ball to aim &amp; shoot!</p>
+            <button onclick="startGame()">KICK OFF</button>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <span class="hint">Click the ball and drag backwards</span> — aim for the corners, and use enough power to beat the keeper!
+    </div>
+
+<script>
+/* ============================================================
+   PRO PENALTY KICK — competitive edition
+   - Goalkeeper AI that dives and makes saves
+   - Miss wide / over the bar / off the woodwork
+   - On a save the ball physically rebounds back out of the goal
+   - On a goal the ball settles into the net
+   ============================================================ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+const streakDisplay    = document.getElementById('streak-display');
+const highScoreDisplay = document.getElementById('high-score-display');
+const livesDisplay     = document.getElementById('lives-display');
+const overlay          = document.getElementById('overlay');
+const overlayTitle     = document.getElementById('overlay-title');
+const overlayDesc      = document.getElementById('overlay-desc');
+
+/* ---------------- GEOMETRY ---------------- */
+const GOAL_LINE_Y  = 180;
+const GOAL_LEFT    = 250;
+const GOAL_RIGHT   = 550;
+const GOAL_CX      = (GOAL_LEFT + GOAL_RIGHT) / 2;   // 400
+const GOAL_TOP_Z   = 112;
+const CROSSBAR_Y   = GOAL_LINE_Y - GOAL_TOP_Z;        // 68
+const BALL_START_X = 400;
+const BALL_START_Y = 470;
+const TRAVEL       = BALL_START_Y - GOAL_LINE_Y;      // 290
+const GRAVITY      = 0.32;
+
+const POST_MARGIN  = 9;
+
+/* Goalkeeper coverage */
+const GK_REACH_IDLE   = 38;
+const GK_HEIGHT_IDLE  = 88;
+const GK_REACH_DIVE   = 62;
+const GK_HEIGHT_DIVE  = 52;
+
+/* Net box */
+const NET_BACK_Y   = GOAL_LINE_Y - 46;
+const NET_INSET    = 26;
+const NET_BACK_TOP = NET_BACK_Y - 54;
+const P = {
+    FL : { x: GOAL_LEFT,              y: GOAL_LINE_Y   },
+    FR : { x: GOAL_RIGHT,             y: GOAL_LINE_Y   },
+    TL : { x: GOAL_LEFT,              y: CROSSBAR_Y    },
+    TR : { x: GOAL_RIGHT,             y: CROSSBAR_Y    },
+    BFL: { x: GOAL_LEFT  + NET_INSET, y: NET_BACK_Y    },
+    BFR: { x: GOAL_RIGHT - NET_INSET, y: NET_BACK_Y    },
+    BTL: { x: GOAL_LEFT  + NET_INSET, y: NET_BACK_TOP  },
+    BTR: { x: GOAL_RIGHT - NET_INSET, y: NET_BACK_TOP  }
+};
+
+/* ---------------- STATE ---------------- */
+let streak    = 0;
+let lives     = 3;
+let highScore = Number(localStorage.getItem('penalty_hs') || 0);
+let gameState = 'START';     // START | READY | AIMING | SHOOTING | RESULT | GAMEOVER
+let shake     = 0;
+let roundTimer = null;
+
+let particles = [];
+let popups    = [];
+let ballTrail = [];
+let netRipple = { x: GOAL_CX, y: (NET_BACK_TOP + NET_BACK_Y) / 2, amp: 0 };
+
+let isDragging = false;
+let dragStart  = { x: 0, y: 0 };
+let dragCur    = { x: 0, y: 0 };
+
+let ball = null;
+let gk   = null;
+
+/* Pre-baked crowd */
+const crowd = [];
+for (let i = 0; i < 650; i++) {
+    crowd.push({
+        x: Math.random() * W,
+        y: Math.random() * 132,
+        r: 1.4 + Math.random() * 2.4,
+        c: 'hsl(' + Math.floor(Math.random() * 360) + ',' +
+           (30 + Math.random() * 45) + '%,' +
+           (22 + Math.random() * 38) + '%)'
+    });
+}
+
+/* ---------------- FACTORIES ---------------- */
+function makeBall() {
+    return {
+        x: BALL_START_X, y: BALL_START_Y, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        rollAngle: 0, spin: 0,
+        visible: true,
+        resolved: false,   // shot outcome already decided?
+        inNet: false       // did it end up inside the net?
+    };
+}
+function makeGK() {
+    return {
+        x: GOAL_CX,
+        state: 'idle',
+        targetX: GOAL_CX,
+        diving: false,
+        reactDelay: 0,
+        diveSpeed: 4,
+        diveProgress: 0
+    };
+}
+
+ball = makeBall();
+gk   = makeGK();
+
+/* ---------------- PERSPECTIVE ---------------- */
+function depthT(y)    { return Math.max(0, Math.min(1.25, (y - GOAL_LINE_Y) / TRAVEL)); }
+function zScale(y)    { return 1 + 0.9 * depthT(y); }
+function ballScale(y) { return 0.62 + 0.38 * depthT(y); }
+
+/* ============================================================
+   UI / GAME FLOW
+   ============================================================ */
+function startGame() {
+    clearTimeout(roundTimer);
+    streak = 0;
+    lives  = 3;
+    particles = [];
+    popups = [];
+    ballTrail = [];
+    netRipple.amp = 0;
+    updateUI();
+    overlay.style.display = 'none';
+    resetRound();
+}
+
+function resetRound() {
+    clearTimeout(roundTimer);
+    roundTimer = null;
+    ball = makeBall();
+    gk   = makeGK();
+    ballTrail = [];
+    isDragging = false;
+    netRipple.amp = 0;
+    if (lives <= 0) { endGame(); return; }
+    gameState = 'READY';
+}
+
+function endGame() {
+    gameState = 'GAMEOVER';
+    if (streak > highScore) {
+        highScore = streak;
+        try { localStorage.setItem('penalty_hs', highScore); } catch (e) {}
+    }
+    updateUI();
+    overlayTitle.innerText = 'Game Over';
+    overlayDesc.innerText  = 'Final Streak: ' + streak + '   •   Best: ' + highScore;
+    overlay.style.display  = 'flex';
+}
+
+function updateUI() {
+    streakDisplay.innerText    = streak;
+    highScoreDisplay.innerText = highScore;
+    let s = '';
+    for (let i = 0; i < 3; i++) s += (i < lives) ? '⚽' : '❌';
+    livesDisplay.innerText = s;
+}
+
+/* ============================================================
+   SHOT MATHS
+   ============================================================ */
+function computeShot(dx, dy) {
+    const dragLen = Math.hypot(dx, dy);
+    const power   = Math.max(0, Math.min(1, dragLen / 180));
+
+    let lateral = dx / 100;
+    lateral = Math.max(-1, Math.min(1, lateral));
+
+    let targetZ = (dy - 20) * 0.9;
+    targetZ = Math.max(4, Math.min(140, targetZ));
+
+    const spread  = 170;
+    const targetX = GOAL_CX + lateral * spread;
+
+    const speed = 11 + power * 9;
+    const t     = TRAVEL / speed;
+
+    const vx = (targetX - BALL_START_X) / t;
+    const vy = -speed;
+    const vz = (targetZ + 0.5 * GRAVITY * t * t) / t;
+
+    return {
+        targetX: targetX, targetZ: targetZ,
+        vx: vx, vy: vy, vz: vz,
+        t: t, power: power, speed: speed, lateral: lateral
+    };
+}
+
+/* ============================================================
+   INPUT
+   ============================================================ */
+function pointerDown(x, y) {
+    if (gameState !== 'READY') return;
+    if (Math.hypot(x - ball.x, y - ball.y) < 80) {
+        isDragging = true;
+        dragStart  = { x: ball.x, y: ball.y };
+        dragCur    = { x: x, y: y };
+        gameState  = 'AIMING';
+    }
+}
+function pointerMove(x, y) {
+    if (!isDragging) return;
+    dragCur.x = x;
+    dragCur.y = y;
+}
+function pointerUp() {
+    if (!isDragging) return;
+    isDragging = false;
+    if (gameState === 'AIMING') shootBall();
+}
+function canvasPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const src = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+}
+canvas.addEventListener('mousedown', e => { const p = canvasPos(e); pointerDown(p.x, p.y); });
+canvas.addEventListener('mousemove', e => { const p = canvasPos(e); pointerMove(p.x, p.y); });
+window.addEventListener('mouseup', pointerUp);
+canvas.addEventListener('mouseleave', pointerUp);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); const p = canvasPos(e); pointerDown(p.x, p.y); }, { passive: false });
+canvas.addEventListener('touchmove',  e => { e.preventDefault(); const p = canvasPos(e); pointerMove(p.x, p.y); }, { passive: false });
+canvas.addEventListener('touchend',   e => { e.preventDefault(); pointerUp(); }, { passive: false });
+
+/* ============================================================
+   SHOOT
+   ============================================================ */
+function shootBall() {
+    const dx = dragStart.x - dragCur.x;
+    const dy = dragStart.y - dragCur.y;
+    if (dy < 20) { gameState = 'READY'; return; }
+
+    const shot = computeShot(dx, dy);
+    ball.vx = shot.vx;
+    ball.vy = shot.vy;
+    ball.vz = shot.vz;
+    ball.spin = 0.05 + Math.abs(ball.vx) * 0.04;
+    ball.resolved = false;
+    ball.inNet = false;
+
+    gameState = 'SHOOTING';
+    ballTrail = [];
+    triggerGK(shot);
+}
+
+/* ============================================================
+   GOALKEEPER AI — difficulty scales with streak
+   ============================================================ */
+function triggerGK(shot) {
+    const diff = Math.min(streak / 8, 1);
+
+    gk.diving       = true;
+    gk.diveProgress = 0;
+    gk.reactDelay   = Math.max(0, Math.round(4 - diff * 3));
+    gk.diveSpeed    = 3.6 + diff * 3.6;
+
+    const readChance = 0.18 + diff * 0.5;
+    const reads = Math.random() < readChance;
+
+    let dir;
+    if (reads) {
+        if (shot.targetX < GOAL_CX - 30)      dir = 'left';
+        else if (shot.targetX > GOAL_CX + 30) dir = 'right';
+        else                                  dir = 'center';
+    } else {
+        const r = Math.random();
+        if      (r < 0.42) dir = 'left';
+        else if (r < 0.84) dir = 'right';
+        else               dir = 'center';
+    }
+
+    if (dir === 'left') {
+        gk.state   = 'left';
+        gk.targetX = GOAL_LEFT + 45;
+    } else if (dir === 'right') {
+        gk.state   = 'right';
+        gk.targetX = GOAL_RIGHT - 45;
+    } else {
+        gk.state   = 'idle';
+        gk.targetX = GOAL_CX;
+    }
+}
+
+function updateGK() {
+    if (!gk.diving) {
+        gk.x = GOAL_CX + Math.sin(Date.now() * 0.0018) * 4;
+        return;
+    }
+    if (gk.reactDelay > 0) { gk.reactDelay--; return; }
+
+    const dx = gk.targetX - gk.x;
+    if (Math.abs(dx) <= gk.diveSpeed) {
+        gk.x = gk.targetX;
+    } else {
+        gk.x += Math.sign(dx) * gk.diveSpeed;
+    }
+    gk.diveProgress = Math.min(1, gk.diveProgress + 0.10);
+}
+
+/* ============================================================
+   BALL PHYSICS
+   Continues to run through SHOOTING *and* RESULT so that
+   rebounds, deflections and net settles all play out.
+   ============================================================ */
+function updateBall() {
+    if (gameState !== 'SHOOTING' && gameState !== 'RESULT') return;
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    ball.z += ball.vz;
+    ball.vz -= GRAVITY;
+    ball.rollAngle += ball.spin;
+    ball.spin *= 0.995;
+
+    // ground bounce + friction
+    if (ball.z < 0) {
+        ball.z = 0;
+        ball.vz = Math.abs(ball.vz) * 0.4;
+        if (Math.abs(ball.vz) < 0.6) ball.vz = 0;
+        ball.vx *= 0.955;
+        ball.vy *= 0.955;
+    }
+
+    // trail only while the shot is in flight
+    if (gameState === 'SHOOTING') {
+        ballTrail.push({ x: ball.x, y: ball.y - ball.z * zScale(ball.y) });
+        if (ballTrail.length > 14) ballTrail.shift();
+    }
+
+    // outcome check — only once per shot
+    if (!ball.resolved && ball.y <= GOAL_LINE_Y) {
+        evaluateShot();
+    }
+}
+
+/* ============================================================
+   SHOT EVALUATION
+   Decides goal / save / wide / over / post / bar and sets the
+   ball's post-shot velocity so the visuals match the outcome.
+   ============================================================ */
+function evaluateShot() {
+    if (ball.resolved) return;
+    ball.resolved = true;
+    gameState = 'RESULT';
+
+    const bx = ball.x;
+    const bz = Math.max(0, ball.z);
+
+    let result  = 'GOAL';
+    let message = 'GOAL!';
+    let color   = '#2ecc71';
+
+    /* ---- off target? ---- */
+    const nearLeftPost  = Math.abs(bx - GOAL_LEFT)  < POST_MARGIN;
+    const nearRightPost = Math.abs(bx - GOAL_RIGHT) < POST_MARGIN;
+    const nearBar       = Math.abs(bz - GOAL_TOP_Z) < POST_MARGIN + 3;
+
+    if (bz > GOAL_TOP_Z + POST_MARGIN) {
+        result = 'OVER';  message = 'OVER THE BAR!'; color = '#e74c3c';
+    } else if (bx < GOAL_LEFT - POST_MARGIN || bx > GOAL_RIGHT + POST_MARGIN) {
+        result = 'WIDE';  message = 'WIDE!';         color = '#e74c3c';
+    } else if (nearBar && bz > GOAL_TOP_Z - POST_MARGIN) {
+        result = 'BAR';   message = 'OFF THE BAR!';  color = '#f39c12';
+    } else if ((nearLeftPost || nearRightPost) && bz < GOAL_TOP_Z) {
+        result = 'POST';  message = 'OFF THE POST!'; color = '#f39c12';
+    } else {
+        /* ---- keeper save check ---- */
+        const diving = gk.diveProgress > 0.25 && gk.state !== 'idle';
+        const reach  = diving ? GK_REACH_DIVE  : GK_REACH_IDLE;
+        const hMax   = diving ? GK_HEIGHT_DIVE : GK_HEIGHT_IDLE;
+
+        const dxGK = Math.abs(bx - gk.x);
+        if (dxGK < reach && bz < hMax) {
+            result  = 'SAVED';
+            message = 'SAVED!';
+            color   = '#3498db';
+        }
+    }
+
+    /* ---- apply outcome ---- */
+    if (result === 'GOAL') {
+        ball.inNet = true;
+
+        // Ball slows down as it hits the back of the net
+        ball.vy *= 0.28;
+        ball.vx *= 0.35;
+        ball.vz *= 0.35;
+
+        streak++;
+        if (streak > highScore) {
+            highScore = streak;
+            try { localStorage.setItem('penalty_hs', highScore); } catch (e) {}
+        }
+        netRipple.x = bx;
+        netRipple.y = NET_BACK_TOP + (NET_BACK_Y - NET_BACK_TOP) * 0.5;
+        netRipple.amp = 24;
+        shake = 12;
+        createPopup(message, GOAL_CX, 240, color, 64);
+        burstParticles(bx, GOAL_LINE_Y - bz, true);
+    }
+    else if (result === 'SAVED') {
+        // ---- KEY FIX: ball rebounds OUT of the goal ----
+        ball.inNet = false;
+
+        const awayDir = (bx >= gk.x) ? 1 : -1;
+
+        ball.vy = Math.abs(ball.vy) * 0.55 + 4.5;        // positive = back toward player
+        ball.vx = awayDir * (2.5 + Math.random() * 2.5);
+        ball.vz = Math.abs(ball.vz) * 0.35 + 3;          // pop it up a bit
+        ball.spin = awayDir * 0.35;
+
+        // Nudge it just behind the keeper so it visually deflects
+        ball.x = gk.x + awayDir * 8;
+
+        lives--;
+        shake = 7;
+        createPopup(message, GOAL_CX, 240, color, 52);
+        burstParticles(bx, GOAL_LINE_Y - bz, false);
+    }
+    else if (result === 'POST') {
+        ball.inNet = false;
+        ball.vx = -ball.vx * 0.75;
+        ball.vy = Math.abs(ball.vy) * 0.5 + 3.5;
+        ball.vz = Math.abs(ball.vz) * 0.4 + 2;
+
+        lives--;
+        shake = 8;
+        createPopup(message, GOAL_CX, 240, color, 52);
+        burstParticles(bx, GOAL_LINE_Y - bz, false);
+    }
+    else if (result === 'BAR') {
+        ball.inNet = false;
+        ball.vz = -Math.abs(ball.vz) * 0.6;
+        ball.vy = Math.abs(ball.vy) * 0.5 + 2.5;
+        ball.vx *= 0.7;
+
+        lives--;
+        shake = 8;
+        createPopup(message, GOAL_CX, 240, color, 52);
+        burstParticles(bx, GOAL_LINE_Y - bz, false);
+    }
+    else {
+        // WIDE or OVER — ball simply continues out of play
+        ball.inNet = false;
+        lives--;
+        shake = 5;
+        createPopup(message, GOAL_CX, 240, color, 52);
+        if (result === 'OVER') burstParticles(bx, 60, false);
+    }
+
+    updateUI();
+    roundTimer = setTimeout(resetRound, 1900);
+}
+
+/* ============================================================
+   PARTICLES / POPUPS
+   ============================================================ */
+function burstParticles(x, y, isGoal) {
+    const colors = isGoal
+        ? ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#ffffff', '#9b59b6']
+        : ['#ecf0f1', '#bdc3c7', '#95a5a6'];
+    const n = isGoal ? 70 : 22;
+    for (let i = 0; i < n; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 12,
+            vy: (Math.random() - 0.5) * 12 - (isGoal ? 5 : 1),
+            life: 1,
+            color: colors[(Math.random() * colors.length) | 0],
+            size: Math.random() * 5 + 3,
+            spin: (Math.random() - 0.5) * 0.4,
+            angle: Math.random() * Math.PI * 2,
+            rect: isGoal && Math.random() < 0.6
+        });
+    }
+}
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        p.vy += 0.22; p.vx *= 0.99;
+        p.angle += p.spin;
+        p.life -= 0.016;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+}
+function drawParticles() {
+    for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        if (p.rect) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle);
+            ctx.fillRect(-p.size, -p.size * 0.55, p.size * 2, p.size * 1.1);
+            ctx.restore();
+        } else {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    ctx.globalAlpha = 1;
+}
+function createPopup(text, x, y, color, size) {
+    popups.push({ text: text, x: x, y: y, color: color, size: size, life: 1, scale: 0.1 });
+}
+function drawPopups() {
+    for (let i = popups.length - 1; i >= 0; i--) {
+        const p = popups[i];
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        p.scale += (1 - p.scale) * 0.22;
+        ctx.translate(p.x, p.y);
+        ctx.scale(p.scale, p.scale);
+        ctx.font = '900 ' + p.size + 'px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.strokeText(p.text, 0, 0);
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.text, 0, 0);
+        ctx.restore();
+        p.y -= 0.9;
+        p.life -= 0.014;
+        if (p.life <= 0) popups.splice(i, 1);
+    }
+}
+
+/* ============================================================
+   DRAW — STADIUM & PITCH
+   ============================================================ */
+function drawStadium() {
+    const g = ctx.createLinearGradient(0, 0, 0, 140);
+    g.addColorStop(0, '#0b0e13');
+    g.addColorStop(1, '#1c2836');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, 140);
+
+    for (let i = 0; i < crowd.length; i++) {
+        const c = crowd[i];
+        ctx.fillStyle = c.c;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    const d = ctx.createLinearGradient(0, 0, 0, 140);
+    d.addColorStop(0, 'rgba(0,0,0,0.65)');
+    d.addColorStop(1, 'rgba(0,0,0,0.15)');
+    ctx.fillStyle = d;
+    ctx.fillRect(0, 0, W, 140);
+
+    ctx.fillStyle = '#111820';
+    ctx.fillRect(0, 132, W, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(0, 132, W, 2);
+}
+
+function drawPitch() {
+    const BANDS = 14;
+    let y = H, bandH = 74;
+    for (let i = 0; i < BANDS; i++) {
+        if (y <= 140) break;
+        const top = Math.max(140, y - bandH);
+        ctx.fillStyle = (i % 2 === 0) ? '#2f9e57' : '#28894b';
+        ctx.fillRect(0, top, W, y - top + 1);
+        y = top;
+        bandH *= 0.85;
+    }
+    if (y > 140) { ctx.fillStyle = '#28894b'; ctx.fillRect(0, 140, W, y - 140); }
+
+    const vg = ctx.createLinearGradient(0, 140, 0, H);
+    vg.addColorStop(0, 'rgba(0,0,0,0.35)');
+    vg.addColorStop(0.55, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(255,255,255,0.06)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 140, W, H - 140);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.82)';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath(); ctx.moveTo(60, GOAL_LINE_Y); ctx.lineTo(W - 60, GOAL_LINE_Y); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(150, GOAL_LINE_Y); ctx.lineTo(150, 352);
+    ctx.lineTo(650, 352); ctx.lineTo(650, GOAL_LINE_Y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(316, GOAL_LINE_Y); ctx.lineTo(316, 244);
+    ctx.lineTo(484, 244); ctx.lineTo(484, GOAL_LINE_Y);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(GOAL_CX, 352, 78, 0, Math.PI); ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.ellipse(BALL_START_X, BALL_START_Y + 26, 6, 3.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+/* ============================================================
+   DRAW — GOAL & NET
+   ============================================================ */
+function bilerp(p1, p2, p3, p4, u, v) {
+    const tx = p1.x + (p2.x - p1.x) * u;
+    const ty = p1.y + (p2.y - p1.y) * u;
+    const bx = p4.x + (p3.x - p4.x) * u;
+    const by = p4.y + (p3.y - p4.y) * u;
+    return { x: tx + (bx - tx) * v, y: ty + (by - ty) * v };
+}
+function netOffset(pt) {
+    if (netRipple.amp < 0.4) return pt;
+    const d = Math.hypot(pt.x - netRipple.x, pt.y - netRipple.y);
+    const k = Math.exp(-(d * d) / (2 * 58 * 58));
+    return { x: pt.x, y: pt.y - netRipple.amp * k };
+}
+function drawMesh(p1, p2, p3, p4, cols, rows, color, lw, bulge) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    for (let j = 0; j <= rows; j++) {
+        const v = j / rows;
+        for (let i = 0; i <= cols; i++) {
+            let pt = bilerp(p1, p2, p3, p4, i / cols, v);
+            if (bulge) pt = netOffset(pt);
+            if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+        }
+    }
+    for (let i = 0; i <= cols; i++) {
+        const u = i / cols;
+        for (let j = 0; j <= rows; j++) {
+            let pt = bilerp(p1, p2, p3, p4, u, j / rows);
+            if (bulge) pt = netOffset(pt);
+            if (j === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+        }
+    }
+    ctx.stroke();
+}
+function drawGoal() {
+    netRipple.amp *= 0.93;
+    if (netRipple.amp < 0.3) netRipple.amp = 0;
+
+    ctx.beginPath();
+    ctx.moveTo(P.FL.x, P.FL.y); ctx.lineTo(P.FR.x, P.FR.y);
+    ctx.lineTo(P.BFR.x, P.BFR.y); ctx.lineTo(P.BFL.x, P.BFL.y);
+    ctx.closePath();
+    ctx.fillStyle = '#1f6b3c';
+    ctx.fill();
+
+    drawMesh(P.BTL, P.BTR, P.BFR, P.BFL, 12, 5, 'rgba(255,255,255,0.30)', 1, true);
+    drawMesh(P.TL, P.BTL, P.BFL, P.FL, 4, 5, 'rgba(255,255,255,0.22)', 1, false);
+    drawMesh(P.TR, P.BTR, P.BFR, P.FR, 4, 5, 'rgba(255,255,255,0.22)', 1, false);
+    drawMesh(P.TL, P.TR, P.BTR, P.BTL, 12, 3, 'rgba(255,255,255,0.18)', 1, false);
+
+    ctx.strokeStyle = 'rgba(220,225,230,0.75)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(P.TL.x, P.TL.y); ctx.lineTo(P.BTL.x, P.BTL.y);
+    ctx.moveTo(P.TR.x, P.TR.y); ctx.lineTo(P.BTR.x, P.BTR.y);
+    ctx.moveTo(P.TL.x + 2, P.TL.y + 4); ctx.lineTo(P.BFL.x, P.BFL.y);
+    ctx.moveTo(P.TR.x - 2, P.TR.y + 4); ctx.lineTo(P.BFR.x, P.BFR.y);
+    ctx.stroke();
+
+    const postW = 8;
+    const postGrad = ctx.createLinearGradient(GOAL_LEFT - postW, 0, GOAL_LEFT, 0);
+    postGrad.addColorStop(0, '#ffffff');
+    postGrad.addColorStop(0.55, '#e6e9ee');
+    postGrad.addColorStop(1, '#b6bcc5');
+    ctx.fillStyle = postGrad;
+    ctx.fillRect(GOAL_LEFT - postW, CROSSBAR_Y, postW, GOAL_TOP_Z);
+    ctx.fillRect(GOAL_RIGHT,        CROSSBAR_Y, postW, GOAL_TOP_Z);
+
+    const barGrad = ctx.createLinearGradient(0, CROSSBAR_Y - postW, 0, CROSSBAR_Y);
+    barGrad.addColorStop(0, '#ffffff');
+    barGrad.addColorStop(1, '#b6bcc5');
+    ctx.fillStyle = barGrad;
+    ctx.fillRect(GOAL_LEFT - postW, CROSSBAR_Y - postW,
+                 GOAL_RIGHT - GOAL_LEFT + postW * 2, postW);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.13)';
+    ctx.fillRect(GOAL_LEFT - postW, CROSSBAR_Y,
+                 GOAL_RIGHT - GOAL_LEFT + postW * 2, 10);
+}
+
+/* ============================================================
+   DRAW — GOALKEEPER
+   ============================================================ */
+function drawGK() {
+    const diving = gk.diving && gk.diveProgress > 0.02;
+    const t   = diving ? gk.diveProgress : 0;
+    const dir = gk.state === 'left' ? -1 : (gk.state === 'right' ? 1 : 0);
+
+    ctx.save();
+    ctx.translate(gk.x, GOAL_LINE_Y);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 3, 30 + t * 28, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const bob = diving ? 0 : Math.sin(Date.now() * 0.006) * 2;
+    ctx.translate(0, -34 + bob);
+    ctx.rotate(dir * t * 1.15);
+
+    const skin   = '#f0b98d';
+    const shirt  = '#f2c313';
+    const shirtD = '#d3a70c';
+    const pants  = '#1c1f24';
+    const gloves = '#f7f9fb';
+    const boots  = '#e74c3c';
+    const spread = t;
+
+    ctx.fillStyle = skin;
+    ctx.fillRect(-11, 6, 9, 26 + t * 6);
+    ctx.fillRect(2, 6, 9, 26 + t * 6);
+    ctx.fillStyle = boots;
+    ctx.fillRect(-13, 30 + t * 6, 12, 9);
+    ctx.fillRect(1, 30 + t * 6, 12, 9);
+
+    ctx.fillStyle = pants;
+    ctx.fillRect(-15, -6, 30, 16);
+
+    const tg = ctx.createLinearGradient(-16, 0, 16, 0);
+    tg.addColorStop(0, shirtD);
+    tg.addColorStop(0.45, shirt);
+    tg.addColorStop(1, shirtD);
+    ctx.fillStyle = tg;
+    ctx.fillRect(-16, -32, 32, 30);
+
+    ctx.save();
+    ctx.translate(-16, -28);
+    ctx.rotate(-0.25 - spread * 0.95);
+    ctx.fillStyle = shirt;
+    ctx.fillRect(-6, 0, 10, 26);
+    ctx.fillStyle = gloves;
+    ctx.beginPath(); ctx.arc(0, 28, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(16, -28);
+    ctx.rotate(0.25 + spread * 0.95);
+    ctx.fillStyle = shirt;
+    ctx.fillRect(-4, 0, 10, 26);
+    ctx.fillStyle = gloves;
+    ctx.beginPath(); ctx.arc(0, 28, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = skin;
+    ctx.beginPath(); ctx.arc(0, -42, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#33251c';
+    ctx.beginPath(); ctx.arc(0, -45, 12, Math.PI, 0); ctx.fill();
+
+    ctx.restore();
+}
+
+/* ============================================================
+   DRAW — BALL
+   ============================================================ */
+function drawBall() {
+    if (!ball.visible) return;
+
+    const sc = ballScale(ball.y);
+    const r  = 15 * sc;
+    const sy = ball.y - ball.z * zScale(ball.y);
+
+    // shadow
+    const shadowAlpha = Math.max(0.05, 0.34 - ball.z * 0.0022);
+    ctx.fillStyle = 'rgba(0,0,0,' + shadowAlpha + ')';
+    ctx.beginPath();
+    ctx.ellipse(ball.x, ball.y, r * 1.02, r * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // trail
+    for (let i = 0; i < ballTrail.length; i++) {
+        const p = ballTrail[i];
+        const a = (i / ballTrail.length) * 0.28;
+        ctx.fillStyle = 'rgba(255,255,255,' + a + ')';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r * (0.35 + 0.6 * i / ballTrail.length), 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.save();
+    ctx.translate(ball.x, sy);
+    ctx.rotate(ball.rollAngle);
+
+    ctx.fillStyle = '#f2f4f6';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#232a33';
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+        const a = (i * Math.PI * 2 / 5) - Math.PI / 2;
+        const px = Math.cos(a) * r * 0.36;
+        const py = Math.sin(a) * r * 0.36;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#232a33';
+    ctx.lineWidth = Math.max(1.4, r * 0.12);
+    for (let i = 0; i < 5; i++) {
+        const a = (i * Math.PI * 2 / 5) - Math.PI / 2;
+        const px1 = Math.cos(a) * r * 0.36;
+        const py1 = Math.sin(a) * r * 0.36;
+        const px2 = Math.cos(a) * r * 0.88;
+        const py2 = Math.sin(a) * r * 0.88;
+        ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(px2, py2); ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(px2, py2, r * 0.24, a - Math.PI / 1.5, a + Math.PI / 1.5);
+        ctx.fill();
+    }
+
+    const grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 0, 0, 0, r);
+    grad.addColorStop(0, 'rgba(255,255,255,0.42)');
+    grad.addColorStop(0.65, 'rgba(255,255,255,0.02)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.42)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+}
+
+/* ============================================================
+   DRAW — AIM AIDS
+   ============================================================ */
+function drawAim() {
+    if (gameState !== 'AIMING' || !isDragging) return;
+
+    const dx = dragStart.x - dragCur.x;
+    const dy = dragStart.y - dragCur.y;
+    if (dy < 12) return;
+
+    const shot = computeShot(dx, dy);
+
+    ctx.save();
+    ctx.setLineDash([7, 9]);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath();
+    const steps = 28;
+    for (let i = 0; i <= steps; i++) {
+        const tt = shot.t * i / steps;
+        const px = BALL_START_X + shot.vx * tt;
+        const py = BALL_START_Y + shot.vy * tt;
+        const pz = Math.max(0, shot.vz * tt - 0.5 * GRAVITY * tt * tt);
+        const psy = py - pz * zScale(py);
+        if (i === 0) ctx.moveTo(px, psy); else ctx.lineTo(px, psy);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ball.x, ball.y);
+    ctx.lineTo(dragCur.x, dragCur.y);
+    ctx.stroke();
+    ctx.restore();
+
+    const tx = shot.targetX;
+    const ty = GOAL_LINE_Y - shot.targetZ;
+
+    const insideGoal =
+        tx > GOAL_LEFT && tx < GOAL_RIGHT && shot.targetZ < GOAL_TOP_Z;
+
+    ctx.save();
+    ctx.strokeStyle = insideGoal ? '#f1c40f' : '#e74c3c';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(tx, ty, 15, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tx - 26, ty); ctx.lineTo(tx - 8, ty);
+    ctx.moveTo(tx + 8, ty);  ctx.lineTo(tx + 26, ty);
+    ctx.moveTo(tx, ty - 26); ctx.lineTo(tx, ty - 8);
+    ctx.moveTo(tx, ty + 8);  ctx.lineTo(tx, ty + 26);
+    ctx.stroke();
+    ctx.fillStyle = insideGoal ? 'rgba(241,196,15,0.9)' : 'rgba(231,76,60,0.9)';
+    ctx.beginPath(); ctx.arc(tx, ty, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    const barW = 150, barH = 12;
+    const bx = ball.x - barW / 2;
+    const by = ball.y + 46;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(bx - 2, by - 2, barW + 4, barH + 4);
+    const pg = ctx.createLinearGradient(bx, 0, bx + barW, 0);
+    pg.addColorStop(0, '#2ecc71');
+    pg.addColorStop(0.6, '#f1c40f');
+    pg.addColorStop(1, '#e74c3c');
+    ctx.fillStyle = pg;
+    ctx.fillRect(bx, by, barW * shot.power, barH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx, by, barW, barH);
+    ctx.restore();
+}
+
+/* ============================================================
+   MAIN LOOP
+   ============================================================ */
+function gameLoop() {
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.save();
+    if (shake > 0.4) {
+        ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+        shake *= 0.87;
+    } else { shake = 0; }
+
+    drawStadium();
+    drawPitch();
+    drawGoal();
+
+    updateGK();
+    drawGK();
+
+    drawAim();
+    updateBall();
+    drawBall();
+
+    updateParticles();
+    drawParticles();
+    drawPopups();
+
+    if (gameState === 'READY') {
+        ctx.font = 'bold 20px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.strokeText('Drag back from the ball — power beats the keeper!', GOAL_CX, 412);
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText('Drag back from the ball — power beats the keeper!', GOAL_CX, 412);
+    }
+
+    ctx.restore();
+    requestAnimationFrame(gameLoop);
+}
+
+updateUI();
+gameLoop();
+</script>
+</body>
+</html>

@@ -1,0 +1,2553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no">
+
+<title>Gravity Flip Runner</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet">
+
+<style>
+
+/* =========================================================
+   RESET
+========================================================= */
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle at 50% 40%,
+            #32104e 0%,
+            #16072b 45%,
+            #05030e 100%
+        );
+
+    color: white;
+
+    font-family:
+        "Press Start 2P",
+        monospace;
+
+    user-select: none;
+}
+
+
+/* =========================================================
+   MAIN GAME
+========================================================= */
+
+.game {
+
+    position: relative;
+
+    width: 100vw;
+    height: 100vh;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   STAR BACKGROUND
+========================================================= */
+
+.stars,
+.stars2 {
+
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    background-repeat: repeat;
+}
+
+.stars {
+
+    opacity: .65;
+
+    background-image:
+        radial-gradient(
+            circle,
+            #ffffff 1px,
+            transparent 1px
+        );
+
+    background-size: 83px 83px;
+
+    animation:
+        starsMove 14s linear infinite;
+}
+
+.stars2 {
+
+    opacity: .35;
+
+    background-image:
+        radial-gradient(
+            circle,
+            #c98cff 1px,
+            transparent 1px
+        );
+
+    background-size: 137px 137px;
+
+    animation:
+        starsMove 25s linear infinite reverse;
+}
+
+@keyframes starsMove {
+
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-137px);
+    }
+
+}
+
+
+/* =========================================================
+   HUD
+========================================================= */
+
+.hud {
+
+    position: absolute;
+
+    top: 20px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: min(900px, 94vw);
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    z-index: 50;
+}
+
+.hud-box {
+
+    min-width: 135px;
+
+    padding: 13px 16px;
+
+    border:
+        2px solid rgba(255,255,255,.18);
+
+    border-radius: 12px;
+
+    background:
+        rgba(7,3,20,.72);
+
+    box-shadow:
+        0 0 20px rgba(180,70,255,.12);
+
+    text-align: center;
+
+    backdrop-filter: blur(8px);
+}
+
+.hud-label {
+
+    display: block;
+
+    font-size: 8px;
+
+    color: #a989c7;
+
+    margin-bottom: 8px;
+}
+
+.hud-value {
+
+    display: block;
+
+    font-size: 16px;
+
+    color: #ffffff;
+}
+
+
+/* =========================================================
+   TITLE
+========================================================= */
+
+.title {
+
+    position: absolute;
+
+    top: 94px;
+
+    width: 100%;
+
+    text-align: center;
+
+    z-index: 30;
+
+    pointer-events: none;
+}
+
+.title h1 {
+
+    margin: 0;
+
+    font-size:
+        clamp(18px, 4vw, 30px);
+
+    color: #e7b7ff;
+
+    text-shadow:
+        0 0 8px #b44cff,
+        0 0 20px #8d2fff;
+}
+
+.title p {
+
+    margin-top: 10px;
+
+    font-size: 7px;
+
+    color: #9e83b5;
+}
+
+
+/* =========================================================
+   PAUSE BUTTON
+========================================================= */
+
+.pause {
+
+    position: absolute;
+
+    top: 18px;
+    right: 20px;
+
+    z-index: 60;
+
+    padding: 9px 12px;
+
+    border:
+        1px solid rgba(255,255,255,.2);
+
+    border-radius: 9px;
+
+    background:
+        rgba(10,3,20,.7);
+
+    color: #dcb9ed;
+
+    font-family:
+        "Press Start 2P",
+        monospace;
+
+    font-size: 7px;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   WORLD
+========================================================= */
+
+.world {
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    top: 150px;
+    bottom: 0;
+
+    overflow: hidden;
+
+    touch-action: manipulation;
+}
+
+
+/* =========================================================
+   CENTER GLOW
+========================================================= */
+
+.world::before {
+
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    top: 50%;
+
+    height: 2px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(190,80,255,.18),
+            transparent
+        );
+
+    box-shadow:
+        0 0 20px rgba(190,80,255,.3);
+}
+
+
+/* =========================================================
+   FLOOR / CEILING
+========================================================= */
+
+.floor,
+.ceiling {
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    height: 30px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #5f2388,
+            #25103e
+        );
+
+    border-top:
+        2px solid #c35cff;
+
+    box-shadow:
+        0 0 18px rgba(190,60,255,.65);
+
+    z-index: 5;
+}
+
+.floor {
+    bottom: 0;
+}
+
+.ceiling {
+
+    top: 0;
+
+    transform: rotate(180deg);
+}
+
+
+/* =========================================================
+   PLAYER
+========================================================= */
+
+.player {
+
+    position: absolute;
+
+    width: 38px;
+    height: 38px;
+
+    left: 17%;
+
+    border-radius: 7px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffe66d,
+            #ff9e2c
+        );
+
+    border:
+        3px solid #fff4aa;
+
+    box-shadow:
+        0 0 10px #ffb52e,
+        0 0 25px rgba(255,140,0,.7);
+
+    z-index: 20;
+
+    will-change:
+        top,
+        transform;
+}
+
+.player::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 9px;
+    height: 9px;
+
+    right: 5px;
+    top: 7px;
+
+    border-radius: 50%;
+
+    background: #301344;
+}
+
+.player::after {
+
+    content: "";
+
+    position: absolute;
+
+    width: 14px;
+    height: 4px;
+
+    left: 6px;
+    bottom: 6px;
+
+    border-radius: 5px;
+
+    background: #7b3b00;
+}
+
+
+/* =========================================================
+   OBSTACLES
+========================================================= */
+
+.obstacle {
+
+    position: absolute;
+
+    width: 42px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ff416c,
+            #b3134e
+        );
+
+    border:
+        2px solid #ff9db5;
+
+    box-shadow:
+        0 0 12px rgba(255,30,100,.75),
+        0 0 30px rgba(255,30,100,.3);
+
+    z-index: 15;
+}
+
+.obstacle.floorObstacle {
+
+    bottom: 30px;
+
+    border-radius:
+        7px 7px 0 0;
+}
+
+.obstacle.ceilingObstacle {
+
+    top: 30px;
+
+    border-radius:
+        0 0 7px 7px;
+}
+
+
+/* =========================================================
+   SPIKES
+========================================================= */
+
+.spike {
+
+    position: absolute;
+
+    width: 0;
+    height: 0;
+
+    border-left:
+        18px solid transparent;
+
+    border-right:
+        18px solid transparent;
+
+    border-bottom:
+        34px solid #ff426f;
+
+    filter:
+        drop-shadow(
+            0 0 7px #ff174f
+        );
+
+    z-index: 16;
+}
+
+.spike.floorObstacle {
+    bottom: 30px;
+}
+
+.spike.ceilingObstacle {
+
+    top: 30px;
+
+    transform:
+        rotate(180deg);
+}
+
+
+/* =========================================================
+   COINS
+========================================================= */
+
+.coin {
+
+    position: absolute;
+
+    width: 23px;
+    height: 23px;
+
+    border-radius: 50%;
+
+    border:
+        3px solid #fff09c;
+
+    background:
+        radial-gradient(
+            circle,
+            #fff5a0,
+            #ffc928 55%,
+            #f18b00
+        );
+
+    box-shadow:
+        0 0 10px #ffc928,
+        0 0 22px rgba(255,200,30,.55);
+
+    z-index: 12;
+
+    animation:
+        coinSpin .7s linear infinite;
+}
+
+@keyframes coinSpin {
+
+    0% {
+        transform:
+            rotateY(0deg)
+            scale(1);
+    }
+
+    50% {
+        transform:
+            rotateY(90deg)
+            scale(.8);
+    }
+
+    100% {
+        transform:
+            rotateY(180deg)
+            scale(1);
+    }
+}
+
+
+/* =========================================================
+   PARTICLES
+========================================================= */
+
+.particle {
+
+    position: absolute;
+
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: #ffbd45;
+
+    pointer-events: none;
+
+    z-index: 25;
+
+    animation:
+        particleFly .45s ease-out forwards;
+}
+
+@keyframes particleFly {
+
+    from {
+
+        opacity: 1;
+
+        transform:
+            translate(0,0)
+            scale(1);
+    }
+
+    to {
+
+        opacity: 0;
+
+        transform:
+            translate(
+                var(--dx),
+                var(--dy)
+            )
+            scale(.1);
+    }
+}
+
+
+/* =========================================================
+   OVERLAY
+========================================================= */
+
+.overlay {
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 100;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        rgba(5,2,15,.76);
+
+    backdrop-filter:
+        blur(8px);
+}
+
+.overlay.hidden {
+    display: none;
+}
+
+
+/* =========================================================
+   CARD
+========================================================= */
+
+.card {
+
+    width:
+        min(440px, 90vw);
+
+    padding: 35px 25px;
+
+    text-align: center;
+
+    border:
+        2px solid rgba(211,105,255,.45);
+
+    border-radius: 22px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(37,13,58,.96),
+            rgba(11,5,24,.98)
+        );
+
+    box-shadow:
+        0 0 45px rgba(180,50,255,.25);
+}
+
+.card h2 {
+
+    margin: 0 0 18px;
+
+    font-size:
+        clamp(20px,5vw,30px);
+
+    color: #e6b3ff;
+
+    text-shadow:
+        0 0 15px #b040ff;
+}
+
+.card p {
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    color: #b9a5c8;
+
+    line-height: 1.7;
+
+    font-size: 14px;
+}
+
+.card strong {
+    color: #ffd35a;
+}
+
+
+/* =========================================================
+   START BUTTON
+========================================================= */
+
+.start-button {
+
+    margin-top: 18px;
+
+    padding: 15px 28px;
+
+    border: 0;
+
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #b535ff,
+            #6721d8
+        );
+
+    color: white;
+
+    font-family:
+        "Press Start 2P",
+        monospace;
+
+    font-size: 10px;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 0 18px rgba(180,50,255,.45);
+
+    transition:
+        transform .15s,
+        box-shadow .15s;
+}
+
+.start-button:hover {
+
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 0 30px rgba(190,50,255,.7);
+}
+
+.start-button:active {
+    transform: scale(.95);
+}
+
+
+/* =========================================================
+   HELP
+========================================================= */
+
+.help {
+
+    position: absolute;
+
+    bottom: 15px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 40;
+
+    font-size: 7px;
+
+    color: #88739a;
+
+    text-align: center;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media(max-width:600px) {
+
+    .hud {
+        top: 15px;
+    }
+
+    .hud-box {
+
+        min-width: 95px;
+
+        padding: 10px 8px;
+    }
+
+    .hud-label {
+        font-size: 6px;
+    }
+
+    .hud-value {
+        font-size: 11px;
+    }
+
+    .title {
+        top: 85px;
+    }
+
+    .world {
+        top: 130px;
+    }
+
+    .player {
+
+        width: 32px;
+        height: 32px;
+
+        left: 18%;
+    }
+
+    .obstacle {
+        width: 36px;
+    }
+
+    .help {
+
+        font-size: 6px;
+
+        bottom: 8px;
+    }
+
+    .pause {
+
+        top: 75px;
+        right: 12px;
+    }
+
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div class="game">
+
+    <div class="stars"></div>
+    <div class="stars2"></div>
+
+
+    <!-- =====================================================
+         HUD
+    ====================================================== -->
+
+    <div class="hud">
+
+        <div class="hud-box">
+
+            <span class="hud-label">
+                SCORE
+            </span>
+
+            <span
+                id="score"
+                class="hud-value"
+            >
+                0
+            </span>
+
+        </div>
+
+
+        <div class="hud-box">
+
+            <span class="hud-label">
+                BEST
+            </span>
+
+            <span
+                id="best"
+                class="hud-value"
+            >
+                0
+            </span>
+
+        </div>
+
+
+        <div class="hud-box">
+
+            <span class="hud-label">
+                COINS
+            </span>
+
+            <span
+                id="coins"
+                class="hud-value"
+            >
+                0
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TITLE
+    ====================================================== -->
+
+    <div class="title">
+
+        <h1>
+            GRAVITY FLIP
+        </h1>
+
+        <p>
+            DEFY GRAVITY • SURVIVE
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         PAUSE
+    ====================================================== -->
+
+    <button
+        id="pauseButton"
+        class="pause"
+    >
+        PAUSE
+    </button>
+
+
+    <!-- =====================================================
+         WORLD
+    ====================================================== -->
+
+    <div
+        id="world"
+        class="world"
+    >
+
+        <div class="ceiling"></div>
+
+        <div class="floor"></div>
+
+        <div
+            id="player"
+            class="player"
+        ></div>
+
+    </div>
+
+
+    <!-- =====================================================
+         HELP
+    ====================================================== -->
+
+    <div class="help">
+        SPACE / CLICK / TAP = FLIP GRAVITY
+    </div>
+
+
+    <!-- =====================================================
+         START / GAME OVER OVERLAY
+    ====================================================== -->
+
+    <div
+        id="overlay"
+        class="overlay"
+    >
+
+        <div class="card">
+
+            <h2 id="overlayTitle">
+                GRAVITY FLIP
+            </h2>
+
+            <p id="overlayText">
+
+                The world is falling apart.
+
+                <br><br>
+
+                Flip gravity to avoid
+                obstacles and survive.
+
+                <br><br>
+
+                Tap, click or press
+                <strong>SPACE</strong>.
+
+            </p>
+
+            <button
+                id="startButton"
+                class="start-button"
+            >
+                START RUN
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const world =
+    document.getElementById("world");
+
+const player =
+    document.getElementById("player");
+
+const scoreEl =
+    document.getElementById("score");
+
+const bestEl =
+    document.getElementById("best");
+
+const coinsEl =
+    document.getElementById("coins");
+
+const overlay =
+    document.getElementById("overlay");
+
+const overlayTitle =
+    document.getElementById("overlayTitle");
+
+const overlayText =
+    document.getElementById("overlayText");
+
+const startButton =
+    document.getElementById("startButton");
+
+const pauseButton =
+    document.getElementById("pauseButton");
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let running = false;
+
+let paused = false;
+
+/*
+    +1 = gravity toward floor
+    -1 = gravity toward ceiling
+*/
+
+let gravity = 1;
+
+let playerY = 0;
+
+let playerVelocity = 0;
+
+let score = 0;
+
+let coins = 0;
+
+let best =
+    Number(
+        localStorage.getItem(
+            "gravity-flip-best"
+        ) || 0
+    );
+
+
+/* =========================================================
+   PHYSICS
+========================================================= */
+
+const GRAVITY_FORCE = 0.42;
+
+const FLIP_IMPULSE = 4.5;
+
+const MIN_SPEED = 4;
+
+const MAX_SPEED = 13;
+
+
+/* =========================================================
+   TIMERS
+========================================================= */
+
+let lastTime = 0;
+
+let obstacleTimer = 0;
+
+let coinTimer = 0;
+
+
+/* =========================================================
+   OBJECTS
+========================================================= */
+
+let obstacles = [];
+
+let coinObjects = [];
+
+
+/* =========================================================
+   WORLD HELPERS
+========================================================= */
+
+function worldWidth() {
+
+    return world.clientWidth;
+
+}
+
+
+function worldHeight() {
+
+    return world.clientHeight;
+
+}
+
+
+/*
+    IMPORTANT:
+
+    Player uses left:17%.
+
+    Convert 17% to actual pixels so
+    collision detection uses exactly
+    the same coordinate system as
+    obstacles and coins.
+*/
+
+function getPlayerX() {
+
+    return worldWidth() * 0.17;
+
+}
+
+
+/* =========================================================
+   PLAYER SIZE
+========================================================= */
+
+function getPlayerWidth() {
+
+    return player.offsetWidth;
+
+}
+
+
+function getPlayerHeight() {
+
+    return player.offsetHeight;
+
+}
+
+
+/* =========================================================
+   RESET PLAYER
+========================================================= */
+
+function resetPlayerPosition() {
+
+    const h =
+        worldHeight();
+
+    const size =
+        getPlayerHeight();
+
+
+    playerY =
+        h - 30 - size;
+
+
+    playerVelocity = 0;
+
+
+    player.style.top =
+        playerY + "px";
+
+
+    player.style.left =
+        "17%";
+
+
+    player.style.transform =
+        "rotate(0deg)";
+
+}
+
+
+/* =========================================================
+   PLAYER PHYSICS
+========================================================= */
+
+function updatePlayer(dt) {
+
+    const h =
+        worldHeight();
+
+    const size =
+        getPlayerHeight();
+
+
+    /*
+        Real gravity.
+    */
+
+    playerVelocity +=
+        GRAVITY_FORCE *
+        gravity *
+        dt;
+
+
+    /*
+        Limit vertical velocity.
+    */
+
+    playerVelocity =
+        Math.max(
+            -14,
+            Math.min(
+                14,
+                playerVelocity
+            )
+        );
+
+
+    /*
+        Move player.
+    */
+
+    playerY +=
+        playerVelocity * dt;
+
+
+    /*
+        Surface positions.
+    */
+
+    const floorY =
+        h - 30 - size;
+
+    const ceilingY =
+        30;
+
+
+    /*
+        Floor collision.
+    */
+
+    if(playerY >= floorY) {
+
+        playerY =
+            floorY;
+
+
+        if(gravity === 1) {
+
+            playerVelocity = 0;
+
+        }
+
+    }
+
+
+    /*
+        Ceiling collision.
+    */
+
+    if(playerY <= ceilingY) {
+
+        playerY =
+            ceilingY;
+
+
+        if(gravity === -1) {
+
+            playerVelocity = 0;
+
+        }
+
+    }
+
+
+    player.style.top =
+        playerY + "px";
+
+
+    /*
+        Rotate player based on
+        vertical velocity.
+    */
+
+    const rotation =
+        Math.max(
+            -35,
+            Math.min(
+                35,
+                playerVelocity * 3
+            )
+        );
+
+
+    player.style.transform =
+        `rotate(${rotation}deg)`;
+
+}
+
+
+/* =========================================================
+   FLIP GRAVITY
+========================================================= */
+
+function flipGravity() {
+
+    if(!running || paused)
+        return;
+
+
+    /*
+        Reverse gravity.
+    */
+
+    gravity *= -1;
+
+
+    /*
+        Give the player initial
+        velocity toward the opposite
+        surface.
+    */
+
+    playerVelocity =
+        gravity *
+        FLIP_IMPULSE;
+
+
+    createFlipParticles();
+
+}
+
+
+/* =========================================================
+   FLIP PARTICLES
+========================================================= */
+
+function createFlipParticles() {
+
+    const x =
+        getPlayerX() +
+        getPlayerWidth() / 2;
+
+    const y =
+        playerY +
+        getPlayerHeight() / 2;
+
+
+    for(let i=0;i<8;i++) {
+
+        const p =
+            document.createElement("div");
+
+
+        p.className =
+            "particle";
+
+
+        p.style.left =
+            x + "px";
+
+
+        p.style.top =
+            y + "px";
+
+
+        p.style.setProperty(
+            "--dx",
+            ((Math.random() - .5) * 70)
+            + "px"
+        );
+
+
+        p.style.setProperty(
+            "--dy",
+            ((Math.random() - .5) * 70)
+            + "px"
+        );
+
+
+        world.appendChild(p);
+
+
+        setTimeout(
+            () => p.remove(),
+            500
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SPEED
+========================================================= */
+
+function getSpeed() {
+
+    /*
+        Speed is proportional to score.
+
+        Score 0:
+            4
+
+        Score 100:
+            5.8
+
+        Score 200:
+            7.6
+
+        Score 300:
+            9.4
+
+        Score 400:
+            11.2
+
+        Score 500+:
+            13
+    */
+
+    return Math.min(
+        MAX_SPEED,
+        MIN_SPEED +
+        score * 0.018
+    );
+
+}
+
+
+/* =========================================================
+   CREATE OBSTACLE
+========================================================= */
+
+function createObstacle() {
+
+    const obstacle =
+        document.createElement("div");
+
+
+    /*
+        Some obstacles are spikes.
+    */
+
+    const spike =
+        Math.random() < 0.38;
+
+
+    /*
+        Obstacle can appear on either
+        surface.
+    */
+
+    const side =
+        Math.random() < .5
+            ? "floor"
+            : "ceiling";
+
+
+    if(spike) {
+
+        obstacle.className =
+            "spike " +
+            (
+                side === "floor"
+                    ? "floorObstacle"
+                    : "ceilingObstacle"
+            );
+
+    }
+
+    else {
+
+        obstacle.className =
+            "obstacle " +
+            (
+                side === "floor"
+                    ? "floorObstacle"
+                    : "ceilingObstacle"
+            );
+
+
+        const height =
+            40 +
+            Math.random() * 65;
+
+
+        obstacle.style.height =
+            height + "px";
+
+    }
+
+
+    const x =
+        worldWidth() + 60;
+
+
+    obstacle.style.left =
+        x + "px";
+
+
+    world.appendChild(
+        obstacle
+    );
+
+
+    /*
+        Read actual rendered size.
+    */
+
+    const width =
+        obstacle.offsetWidth;
+
+    const height =
+        obstacle.offsetHeight;
+
+
+    obstacles.push({
+
+        el: obstacle,
+
+        x: x,
+
+        width: width,
+
+        height: height,
+
+        side: side
+
+    });
+
+}
+
+
+/* =========================================================
+   CREATE COIN
+========================================================= */
+
+function createCoin() {
+
+    const coin =
+        document.createElement("div");
+
+
+    coin.className =
+        "coin";
+
+
+    const h =
+        worldHeight();
+
+
+    /*
+        Coins appear near either surface.
+    */
+
+    const side =
+        Math.random() < .5
+            ? "floor"
+            : "ceiling";
+
+
+    let y;
+
+
+    if(side === "floor") {
+
+        y =
+            h -
+            100 -
+            Math.random() * 100;
+
+    }
+
+    else {
+
+        y =
+            70 +
+            Math.random() * 100;
+
+    }
+
+
+    const x =
+        worldWidth() + 50;
+
+
+    coin.style.left =
+        x + "px";
+
+
+    coin.style.top =
+        y + "px";
+
+
+    world.appendChild(
+        coin
+    );
+
+
+    const width =
+        coin.offsetWidth;
+
+    const height =
+        coin.offsetHeight;
+
+
+    coinObjects.push({
+
+        el: coin,
+
+        x: x,
+
+        y: y,
+
+        width: width,
+
+        height: height
+
+    });
+
+}
+
+
+/* =========================================================
+   COLLISION
+========================================================= */
+
+function intersects(a,b) {
+
+    return (
+
+        a.x <
+        b.x + b.width &&
+
+        a.x + a.width >
+        b.x &&
+
+        a.y <
+        b.y + b.height &&
+
+        a.y + a.height >
+        b.y
+
+    );
+
+}
+
+
+/* =========================================================
+   PLAYER RECT
+========================================================= */
+
+function getPlayerRect() {
+
+    return {
+
+        x:
+            getPlayerX(),
+
+        y:
+            playerY,
+
+        width:
+            getPlayerWidth(),
+
+        height:
+            getPlayerHeight()
+
+    };
+
+}
+
+
+/* =========================================================
+   OBSTACLE RECT
+========================================================= */
+
+function getObstacleRect(o) {
+
+    const h =
+        worldHeight();
+
+
+    let y;
+
+
+    if(o.side === "floor") {
+
+        y =
+            h -
+            30 -
+            o.height;
+
+    }
+
+    else {
+
+        y =
+            30;
+
+    }
+
+
+    return {
+
+        x:
+            o.x,
+
+        y:
+            y,
+
+        width:
+            o.width,
+
+        height:
+            o.height
+
+    };
+
+}
+
+
+/* =========================================================
+   COIN RECT
+========================================================= */
+
+function getCoinRect(c) {
+
+    return {
+
+        x:
+            c.x,
+
+        y:
+            c.y,
+
+        width:
+            c.width,
+
+        height:
+            c.height
+
+    };
+
+}
+
+
+/* =========================================================
+   UPDATE OBSTACLES
+========================================================= */
+
+function updateObstacles(dt) {
+
+    const speed =
+        getSpeed();
+
+
+    const movement =
+        speed * dt;
+
+
+    const playerRect =
+        getPlayerRect();
+
+
+    for(
+        let i = obstacles.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const obstacle =
+            obstacles[i];
+
+
+        /*
+            Move obstacle.
+        */
+
+        obstacle.x -=
+            movement;
+
+
+        obstacle.el.style.left =
+            obstacle.x + "px";
+
+
+        /*
+            Collision rectangle.
+        */
+
+        const obstacleRect =
+            getObstacleRect(
+                obstacle
+            );
+
+
+        /*
+            REAL COLLISION.
+        */
+
+        if(
+            intersects(
+                playerRect,
+                obstacleRect
+            )
+        ) {
+
+            gameOver();
+
+            return;
+
+        }
+
+
+        /*
+            Remove after leaving screen.
+        */
+
+        if(
+            obstacle.x +
+            obstacle.width <
+            -60
+        ) {
+
+            obstacle.el.remove();
+
+            obstacles.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   UPDATE COINS
+========================================================= */
+
+function updateCoins(dt) {
+
+    const speed =
+        getSpeed();
+
+
+    const movement =
+        speed * dt;
+
+
+    const playerRect =
+        getPlayerRect();
+
+
+    for(
+        let i = coinObjects.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const coin =
+            coinObjects[i];
+
+
+        /*
+            Move coin.
+        */
+
+        coin.x -=
+            movement;
+
+
+        coin.el.style.left =
+            coin.x + "px";
+
+
+        const coinRect =
+            getCoinRect(
+                coin
+            );
+
+
+        /*
+            COLLECTED.
+        */
+
+        if(
+            intersects(
+                playerRect,
+                coinRect
+            )
+        ) {
+
+            coins++;
+
+            score += 20;
+
+
+            coinsEl.textContent =
+                coins;
+
+
+            createCoinParticles(
+                coin.x +
+                coin.width / 2,
+
+                coin.y +
+                coin.height / 2
+            );
+
+
+            coin.el.remove();
+
+            coinObjects.splice(
+                i,
+                1
+            );
+
+
+            continue;
+
+        }
+
+
+        /*
+            MISSED COIN.
+
+            Remove it once it has
+            completely passed the player.
+        */
+
+        const playerX =
+            getPlayerX();
+
+
+        if(
+            coin.x +
+            coin.width <
+            playerX
+        ) {
+
+            coin.el.remove();
+
+            coinObjects.splice(
+                i,
+                1
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   COIN PARTICLES
+========================================================= */
+
+function createCoinParticles(x,y) {
+
+    for(let i=0;i<7;i++) {
+
+        const p =
+            document.createElement("div");
+
+
+        p.className =
+            "particle";
+
+
+        p.style.left =
+            x + "px";
+
+
+        p.style.top =
+            y + "px";
+
+
+        p.style.setProperty(
+            "--dx",
+            ((Math.random() - .5) * 60)
+            + "px"
+        );
+
+
+        p.style.setProperty(
+            "--dy",
+            ((Math.random() - .5) * 60)
+            + "px"
+        );
+
+
+        world.appendChild(p);
+
+
+        setTimeout(
+            () => p.remove(),
+            500
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SPAWN SYSTEM
+========================================================= */
+
+function spawnThings(dt) {
+
+    obstacleTimer +=
+        dt * 16.67;
+
+
+    coinTimer +=
+        dt * 16.67;
+
+
+    /*
+        Obstacles get closer together
+        as score increases.
+    */
+
+    const obstacleDelay =
+        Math.max(
+            650,
+            1500 -
+            score * 1.5
+        );
+
+
+    if(
+        obstacleTimer >=
+        obstacleDelay
+    ) {
+
+        createObstacle();
+
+        obstacleTimer = 0;
+
+    }
+
+
+    /*
+        Coins also become slightly
+        less frequent at higher scores.
+    */
+
+    const coinDelay =
+        Math.max(
+            800,
+            1200 -
+            score * .4
+        );
+
+
+    if(
+        coinTimer >=
+        coinDelay
+    ) {
+
+        createCoin();
+
+        coinTimer = 0;
+
+    }
+
+}
+
+
+/* =========================================================
+   GAME LOOP
+========================================================= */
+
+function gameLoop(timestamp) {
+
+    requestAnimationFrame(
+        gameLoop
+    );
+
+
+    if(!running || paused)
+        return;
+
+
+    if(!lastTime) {
+
+        lastTime =
+            timestamp;
+
+    }
+
+
+    let dt =
+        (
+            timestamp -
+            lastTime
+        ) / 16.67;
+
+
+    lastTime =
+        timestamp;
+
+
+    /*
+        Prevent huge jumps after
+        tab switching.
+    */
+
+    dt =
+        Math.min(
+            dt,
+            2
+        );
+
+
+    /*
+        Player physics.
+    */
+
+    updatePlayer(dt);
+
+
+    /*
+        Spawn.
+    */
+
+    spawnThings(dt);
+
+
+    /*
+        Obstacles.
+    */
+
+    updateObstacles(dt);
+
+
+    if(!running)
+        return;
+
+
+    /*
+        Coins.
+    */
+
+    updateCoins(dt);
+
+
+    /*
+        Score is based on distance.
+    */
+
+    const speed =
+        getSpeed();
+
+
+    score +=
+        speed *
+        0.018 *
+        dt;
+
+
+    const displayScore =
+        Math.floor(score);
+
+
+    scoreEl.textContent =
+        displayScore;
+
+
+    /*
+        Best score.
+    */
+
+    if(
+        displayScore >
+        best
+    ) {
+
+        best =
+            displayScore;
+
+
+        bestEl.textContent =
+            best;
+
+
+        localStorage.setItem(
+            "gravity-flip-best",
+            best
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CLEAR OBJECTS
+========================================================= */
+
+function clearWorld() {
+
+    obstacles.forEach(
+        obstacle =>
+            obstacle.el.remove()
+    );
+
+
+    coinObjects.forEach(
+        coin =>
+            coin.el.remove()
+    );
+
+
+    obstacles = [];
+
+    coinObjects = [];
+
+
+    document
+        .querySelectorAll(
+            ".particle"
+        )
+        .forEach(
+            particle =>
+                particle.remove()
+        );
+
+}
+
+
+/* =========================================================
+   START GAME
+========================================================= */
+
+function startGame() {
+
+    clearWorld();
+
+
+    running = true;
+
+    paused = false;
+
+
+    gravity = 1;
+
+
+    score = 0;
+
+    coins = 0;
+
+
+    obstacleTimer = 0;
+
+    coinTimer = 0;
+
+
+    lastTime = 0;
+
+
+    scoreEl.textContent =
+        "0";
+
+
+    coinsEl.textContent =
+        "0";
+
+
+    resetPlayerPosition();
+
+
+    overlay.classList.add(
+        "hidden"
+    );
+
+
+    pauseButton.textContent =
+        "PAUSE";
+
+}
+
+
+/* =========================================================
+   GAME OVER
+========================================================= */
+
+function gameOver() {
+
+    if(!running)
+        return;
+
+
+    running = false;
+
+    paused = false;
+
+
+    const finalScore =
+        Math.floor(score);
+
+
+    if(
+        finalScore >
+        best
+    ) {
+
+        best =
+            finalScore;
+
+
+        localStorage.setItem(
+            "gravity-flip-best",
+            best
+        );
+
+    }
+
+
+    bestEl.textContent =
+        best;
+
+
+    overlayTitle.textContent =
+        "RUN OVER";
+
+
+    overlayText.innerHTML =
+
+        `SCORE:
+        <strong>${finalScore}</strong>
+
+        <br><br>
+
+        COINS:
+        <strong>${coins}</strong>
+
+        <br><br>
+
+        You hit an obstacle!`;
+
+
+    startButton.textContent =
+        "RUN AGAIN";
+
+
+    overlay.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+/* =========================================================
+   PAUSE
+========================================================= */
+
+function togglePause() {
+
+    if(!running)
+        return;
+
+
+    paused =
+        !paused;
+
+
+    if(paused) {
+
+        pauseButton.textContent =
+            "RESUME";
+
+    }
+
+    else {
+
+        pauseButton.textContent =
+            "PAUSE";
+
+        lastTime = 0;
+
+    }
+
+}
+
+
+/* =========================================================
+   KEYBOARD
+========================================================= */
+
+document.addEventListener(
+    "keydown",
+    function(e) {
+
+        if(
+            e.code === "Space" ||
+            e.code === "ArrowUp" ||
+            e.code === "KeyW"
+        ) {
+
+            e.preventDefault();
+
+            flipGravity();
+
+        }
+
+
+        if(
+            e.code === "KeyP" ||
+            e.code === "Escape"
+        ) {
+
+            e.preventDefault();
+
+            togglePause();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   MOUSE / TOUCH
+========================================================= */
+
+world.addEventListener(
+    "pointerdown",
+    function() {
+
+        if(!running)
+            return;
+
+
+        flipGravity();
+
+    }
+);
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+startButton.addEventListener(
+    "click",
+    function(e) {
+
+        e.stopPropagation();
+
+        startGame();
+
+    }
+);
+
+
+pauseButton.addEventListener(
+    "click",
+    function(e) {
+
+        e.stopPropagation();
+
+        togglePause();
+
+    }
+);
+
+
+/* =========================================================
+   RESIZE
+========================================================= */
+
+window.addEventListener(
+    "resize",
+    function() {
+
+        if(!running) {
+
+            resetPlayerPosition();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+bestEl.textContent =
+    best;
+
+
+resetPlayerPosition();
+
+
+requestAnimationFrame(
+    gameLoop
+);
+
+</script>
+
+</body>
+</html>
